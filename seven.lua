@@ -9,7 +9,7 @@ local LocalPlayer = Players.LocalPlayer
 -- Configurações Globais
 local Config = {
     Aimbot = { Enabled = false, Smoothness = 1, Prediction = 0.0, WallCheck = true, RandomHitbox = false },
-    ESP = { Boxes = false, Tracers = false, Skeleton = false, HealthText = false, Color = Color3.fromRGB(255, 50, 50), XOffset = 0, YOffset = 0 },
+    ESP = { Boxes = false, Tracers = false, Skeleton = false, HealthText = false, Color = Color3.fromRGB(255, 50, 50),
     FOV = { Visible = false, Radius = 150, Color = Color3.fromRGB(255, 255, 255) },
     TeamCheck = false
 }
@@ -81,8 +81,9 @@ Players.PlayerAdded:Connect(CreateESP)
 -- Função corrigida para alinhar o Drawing na tela Mobile
 local function GetScreenPos(position)
     local pos, vis = Camera:WorldToViewportPoint(position)
-    -- Aplica o offset pra corrigir o desalinhamento do celular (Notch/Safe Area)
-    return Vector2.new(pos.X + Config.ESP.XOffset, pos.Y + Config.ESP.YOffset), vis, pos.Z
+    local inset = game:GetService("GuiService"):GetGuiInset()
+    -- Puxa a diferença de pixels do notch/topbar e corrige a Drawing API automaticamente
+    return Vector2.new(pos.X + inset.X, pos.Y + inset.Y), vis, pos.Z
 end
 
 local function IsVisible(targetPart)
@@ -424,10 +425,6 @@ local T_Skel = CreateToggle("Skeleton ESP", "rbxassetid://6031932273", function(
 local T_Box = CreateToggle("Box ESP", "rbxassetid://6031201502", function(s) Config.ESP.Boxes = s end)
 local T_Tracer = CreateToggle("Tracers", "rbxassetid://6031302821", function(s) Config.ESP.Tracers = s end)
 local T_Health = CreateToggle("Health Value", "rbxassetid://6031094359", function(s) Config.ESP.HealthText = s end)
-
--- CALIBRAÇÃO MOBILE (Mexe aqui para colar o Esqueleto no Corpo)
-CreateSlider("Mobile X Offset (Fix ESP)", "rbxassetid://6031091004", -150, 150, 0, function(v) Config.ESP.XOffset = v end)
-CreateSlider("Mobile Y Offset (Fix ESP)", "rbxassetid://6031091004", -150, 150, 0, function(v) Config.ESP.YOffset = v end)
 
 -- O Color Picker Foda que você pediu
 BuildRealColorPicker("ESP RGB Picker", "rbxassetid://6031072946", Config.ESP, "Color")
