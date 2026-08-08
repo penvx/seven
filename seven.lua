@@ -144,10 +144,11 @@ end
 
 
 -- Loop de ESP
-  RunService.RenderStepped:Connect(function(dt)
+ RunService.RenderStepped:Connect(function(dt)
     local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     FOV_Circle.Position = screenCenter
-    FOV_Circle.Radius = Config.FOV.Radius; FOV_Circle.Color = Config.FOV.Color
+    FOV_Circle.Radius = Config.FOV.Radius
+    FOV_Circle.Color = Config.FOV.Color
     FOV_Circle.Visible = Config.FOV.Visible
 
     for player, drawings in pairs(ESP_Cache) do
@@ -165,16 +166,21 @@ end
                 local height = math.abs(headPos.Y - legPos.Y)
                 local width = height / 1.8
 
+                -- Box
                 if Config.ESP.Boxes then
                     drawings.BoxOutline.Size = Vector2.new(width, height)
                     drawings.BoxOutline.Position = Vector2.new(rootPos.X - width / 2, rootPos.Y - height / 2)
                     drawings.BoxOutline.Visible = true
-                    drawings.Box.Size = drawings.BoxOutline.Size; drawings.Box.Position = drawings.BoxOutline.Position
-                    drawings.Box.Color = Config.ESP.Color; drawings.Box.Visible = true
+                    drawings.Box.Size = drawings.BoxOutline.Size
+                    drawings.Box.Position = drawings.BoxOutline.Position
+                    drawings.Box.Color = Config.ESP.Color
+                    drawings.Box.Visible = true
                 else
-                    drawings.Box.Visible = false; drawings.BoxOutline.Visible = false
+                    drawings.Box.Visible = false
+                    drawings.BoxOutline.Visible = false
                 end
                 
+                -- Health
                 if Config.ESP.HealthText then
                     drawings.Health.Text = tostring(math.floor(hum.Health)) .. "%"
                     drawings.Health.Position = Vector2.new(rootPos.X, rootPos.Y + (height / 2) + 5)
@@ -183,42 +189,55 @@ end
                     drawings.Health.Visible = false
                 end
 
+                -- Tracers
                 if Config.ESP.Tracers then
                     drawings.Tracer.From = Vector2.new(screenCenter.X, Camera.ViewportSize.Y)
                     drawings.Tracer.To = Vector2.new(rootPos.X, rootPos.Y)
-                    drawings.Tracer.Color = Config.ESP.Color; drawings.Tracer.Visible = true
+                    drawings.Tracer.Color = Config.ESP.Color
+                    drawings.Tracer.Visible = true
                 else
                     drawings.Tracer.Visible = false
                 end
 
+                -- Skeleton
                 if Config.ESP.Skeleton then
-    local rigType = hum.RigType == Enum.HumanoidRigType.R15 and "R15" or "R6"
-    local connections = Skeletons[rigType]
-    
-    for i = 1, 14 do -- Maximo de ossos no desenho é 14 (R15)
-        if i <= #connections then
-            local p1, p2 = char:FindFirstChild(connections[i][1]), char:FindFirstChild(connections[i][2])
-            if p1 and p2 then
-                local pos1, vis1, z1 = GetScreenPos(p1.Position)
-                local pos2, vis2, z2 = GetScreenPos(p2.Position)
-                if vis1 and vis2 and z1 > 0 and z2 > 0 then
-                    drawings.Skeleton[i].From = pos1
-                    drawings.Skeleton[i].To = pos2
-                    drawings.Skeleton[i].Color = Config.ESP.Color
-                    drawings.Skeleton[i].Visible = true
+                    local rigType = hum.RigType == Enum.HumanoidRigType.R15 and "R15" or "R6"
+                    local connections = Skeletons[rigType]
+                    for i = 1, 14 do
+                        if i <= #connections then
+                            local p1, p2 = char:FindFirstChild(connections[i][1]), char:FindFirstChild(connections[i][2])
+                            if p1 and p2 then
+                                local pos1, vis1, z1 = GetScreenPos(p1.Position)
+                                local pos2, vis2, z2 = GetScreenPos(p2.Position)
+                                if vis1 and vis2 and z1 > 0 and z2 > 0 then
+                                    drawings.Skeleton[i].From = pos1
+                                    drawings.Skeleton[i].To = pos2
+                                    drawings.Skeleton[i].Color = Config.ESP.Color
+                                    drawings.Skeleton[i].Visible = true
+                                else
+                                    drawings.Skeleton[i].Visible = false
+                                end
+                            else
+                                drawings.Skeleton[i].Visible = false
+                            end
+                        else
+                            drawings.Skeleton[i].Visible = false
+                        end
+                    end
                 else
-                    drawings.Skeleton[i].Visible = false
+                    for _, line in pairs(drawings.Skeleton) do line.Visible = false end
                 end
-            else
-                drawings.Skeleton[i].Visible = false
             end
         else
-            drawings.Skeleton[i].Visible = false -- Oculta as linhas que sobrarem se for R6
+            -- Se o personagem não estiver vivo, esconde tudo
+            drawings.Box.Visible = false
+            drawings.BoxOutline.Visible = false
+            drawings.Tracer.Visible = false
+            drawings.Health.Visible = false
+            for _, line in pairs(drawings.Skeleton) do line.Visible = false end
         end
     end
-else
-    for _, line in pairs(drawings.Skeleton) do line.Visible = false end
-end
+
 
 
     -- Aimbot 
@@ -236,17 +255,14 @@ end
         if Config.Aimbot.Smoothness >= 1 then
             Camera.CFrame = targetCFrame
         else
-            -- Fórmula de decaimento exponencial, 100% independente do FPS. Fica muito mais fluído.
-            local smoothFactor = 1 - math.exp(-Config.Aimbot.Smoothness * 15 * dt)
-            Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, smoothFactor)
-        end
-    end
-end
-
-
----------------------------------------------------------
--- UI MODERNA SEM EMOJIS
----------------------------------------------------------
+                                else
+                        -- Fórmula de decaimento exponencial, 100% independente do FPS. Fica muito mais fluído.
+                        local smoothFactor = 1 - math.exp(-Config.Aimbot.Smoothness * 15 * dt)
+                        Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, smoothFactor)
+                    end
+                end
+            end
+        end)
 ---------------------------------------------------------
 -- UI MODERNA SEM EMOJIS
 ---------------------------------------------------------
@@ -564,7 +580,55 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey)
     label.TextColor3 = Color3.fromRGB(200, 200, 200)
     label.TextSize = 14
     label.TextXAlignment = Enum.TextXAlignment.Left
+    -- Sistema de Save/Load na Aba FOV
+local ConfigName = "EZ_MOBILE_CFG.json"
+local function CreateActionBtn(parent, name, iconId, callback)
+    local frame = Instance.new("Frame", parent)
+    frame.Size = UDim2.new(1, 0, 0, 44)
+    frame.BackgroundColor3 = Color3.fromRGB(40, 20, 25)
+    frame.BackgroundTransparency = 0.3
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     
+    local icon = Instance.new("ImageLabel", frame)
+    icon.Size = UDim2.new(0, 20, 0, 20); icon.Position = UDim2.new(0, 10, 0.5, -10)
+    icon.BackgroundTransparency = 1; icon.Image = iconId; icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
+    
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.new(1, -80, 1, 0); label.Position = UDim2.new(0, 40, 0, 0)
+    label.BackgroundTransparency = 1; label.Text = name; label.Font = Enum.Font.GothamBold
+    label.TextSize = 14; label.TextColor3 = Color3.fromRGB(220, 220, 220); label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = ""; btn.ZIndex = 2
+    btn.MouseButton1Click:Connect(callback)
+end
+
+CreateActionBtn(tabFOV, "Save Config", "rbxassetid://6031280882", function()
+    if writefile then
+        local saveCfg = {
+            Aimbot = Config.Aimbot,
+            FOV = {Visible = Config.FOV.Visible, Radius = Config.FOV.Radius},
+            ESP = {Boxes = Config.ESP.Boxes, Tracers = Config.ESP.Tracers, Skeleton = Config.ESP.Skeleton, HealthText = Config.ESP.HealthText}
+        }
+        writefile(ConfigName, HttpService:JSONEncode(saveCfg))
+    end
+end)
+
+CreateActionBtn(tabFOV, "Load Config", "rbxassetid://6031236746", function()
+    if readfile and isfile and isfile(ConfigName) then
+        local saved = HttpService:JSONDecode(readfile(ConfigName))
+        if saved then 
+            Config.Aimbot = saved.Aimbot
+            Config.FOV.Visible = saved.FOV.Visible
+            Config.FOV.Radius = saved.FOV.Radius
+            Config.ESP.Boxes = saved.ESP.Boxes
+            Config.ESP.Tracers = saved.ESP.Tracers
+            Config.ESP.Skeleton = saved.ESP.Skeleton
+            Config.ESP.HealthText = saved.ESP.HealthText
+        end
+    end
+end)
+
     -- Área de Saturação/Valor (100x100)
     local SVArea = Instance.new("ImageButton", frame)
     SVArea.Size = UDim2.new(0, 100, 0, 100)
