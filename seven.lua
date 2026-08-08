@@ -374,7 +374,7 @@ local function CreateTab(name, iconId)
     content.Position = UDim2.new(0, 5, 0, 85)
     content.BackgroundTransparency = 1
     content.ScrollBarThickness = 2
-    content.CanvasSize = UDim2.new(0, 0, 2, 0)
+    content.AutomaticCanvasSize = Enum.AutomaticSize.Y
     content.Visible = false
     content.ZIndex = 2
     content.BottomImage = "rbxassetid://0" 
