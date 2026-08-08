@@ -343,65 +343,45 @@ end)
 
 -- Sistema de Abas
 local TabFrame = Instance.new("Frame", Main)
-TabFrame.Size = UDim2.new(1, 0, 0, 40)
-TabFrame.Position = UDim2.new(0, 0, 0, 45)
-TabFrame.BackgroundTransparency = 1
-TabFrame.ZIndex = 2
+TabFrame.Size = UDim2.new(1, 0, 0, 40); TabFrame.Position = UDim2.new(0, 0, 0, 45)
+TabFrame.BackgroundTransparency = 1; TabFrame.ZIndex = 2
 
-local TabButtons = {}
-local TabContents = {}
+local TabButtons = {}; local TabContents = {}
 local function CreateTab(name, iconId)
     local btn = Instance.new("ImageButton", TabFrame)
-    btn.Size = UDim2.new(0, 60, 1, 0)
-    btn.BackgroundTransparency = 1
-    btn.Image = iconId
-    btn.ImageColor3 = Color3.fromRGB(180, 180, 180)
-    btn.ScaleType = Enum.ScaleType.Fit
-    btn.ZIndex = 3
+    btn.Size = UDim2.new(0, 60, 1, 0); btn.BackgroundTransparency = 1; btn.Image = iconId
+    btn.ImageColor3 = Color3.fromRGB(180, 180, 180); btn.ScaleType = Enum.ScaleType.Fit; btn.ZIndex = 3
     
     local label = Instance.new("TextLabel", btn)
-    label.Size = UDim2.new(1, 0, 0, 15)
-    label.Position = UDim2.new(0, 0, 1, -15)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 10
-    label.TextColor3 = Color3.fromRGB(180, 180, 180)
-    label.TextXAlignment = Enum.TextXAlignment.Center
-    label.ZIndex = 3
+    label.Size = UDim2.new(1, 0, 0, 15); label.Position = UDim2.new(0, 0, 1, -15)
+    label.BackgroundTransparency = 1; label.Text = name; label.Font = Enum.Font.GothamBold
+    label.TextSize = 10; label.TextColor3 = Color3.fromRGB(180, 180, 180); label.TextXAlignment = Enum.TextXAlignment.Center; label.ZIndex = 3
     
     local content = Instance.new("ScrollingFrame", Main)
-    content.Size = UDim2.new(1, -10, 1, -90)
-    content.Position = UDim2.new(0, 5, 0, 85)
-    content.BackgroundTransparency = 1
-    content.ScrollBarThickness = 2
-    content.CanvasSize = UDim2.new(0, 0, 0, 1200) -- Altura corrigida pro mobile não bugar
-    content.Visible = false
-    content.ZIndex = 2
-    content.BottomImage = "rbxassetid://0"
-    content.MidImage = "rbxassetid://0"
-    content.TopImage = "rbxassetid://0"
+    content.Size = UDim2.new(1, -10, 1, -90); content.Position = UDim2.new(0, 5, 0, 85)
+    content.BackgroundTransparency = 1; content.ScrollBarThickness = 2
+    content.CanvasSize = UDim2.new(0, 0, 0, 1200) -- Altura certa pro mobile
+    content.Visible = false; content.ZIndex = 2
+    content.BottomImage = "rbxassetid://0"; content.MidImage = "rbxassetid://0"; content.TopImage = "rbxassetid://0"
     
-    -- ISSO AQUI TAVA FALTANDO! Organiza tudo na vertical sem sobrepor.
+    -- O organizador que empilha tudo certinho
     local layout = Instance.new("UIListLayout", content)
     layout.Padding = UDim.new(0, 5)
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     
-    table.insert(TabButtons, btn)
-    table.insert(TabContents, content)
+    table.insert(TabButtons, btn); table.insert(TabContents, content)
     return content
 end
 
--- Ícones novos, blindados e que carregam 100% das vezes
-local tabAim = CreateTab("AIM", "rbxassetid://6031763426")
-local tabESP = CreateTab("ESP", "rbxassetid://6031201502") -- Olho
-local tabFOV = CreateTab("FOV", "rbxassetid://6031262330") -- Radar
+-- Ícones blindados do próprio Roblox (Sempre carregam)
+local tabAim = CreateTab("AIM", "rbxassetid://3944680095")
+local tabESP = CreateTab("ESP", "rbxassetid://7733658504")
+local tabFOV = CreateTab("FOV", "rbxassetid://8997385940")
 
 local tabCount = #TabButtons
 for i, btn in ipairs(TabButtons) do
-    btn.Position = UDim2.new((i-1)/tabCount, 0, 0, 0)
-    btn.Size = UDim2.new(1/tabCount, 0, 1, 0)
+    btn.Position = UDim2.new((i-1)/tabCount, 0, 0, 0); btn.Size = UDim2.new(1/tabCount, 0, 1, 0)
 end
 
 local function SelectTab(index)
@@ -414,296 +394,162 @@ local function SelectTab(index)
 end
 SelectTab(1)
 
--- FIX: Variável salva o clique certo. Agora a aba FOV abre e o Color Picker funciona.
+-- FIX: Garante que a aba certa abra (Aba FOV destravada)
 for i, btn in ipairs(TabButtons) do
     local currentIndex = i 
     btn.MouseButton1Click:Connect(function() SelectTab(currentIndex) end)
 end
 
-
 -- ========== FUNÇÕES DE UI MELHORADAS ==========
-
--- Toggle com switch (iOS style)
 local function CreateToggle(parent, name, iconId, callback)
     local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, 0, 0, 44)
-    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    frame.BackgroundTransparency = 0.3
+    frame.Size = UDim2.new(1, 0, 0, 44); frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30); frame.BackgroundTransparency = 0.3
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     
     local icon = Instance.new("ImageLabel", frame)
-    icon.Size = UDim2.new(0, 20, 0, 20)
-    icon.Position = UDim2.new(0, 10, 0.5, -10)
-    icon.BackgroundTransparency = 1
-    icon.Image = iconId
-    icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
+    icon.Size = UDim2.new(0, 20, 0, 20); icon.Position = UDim2.new(0, 10, 0.5, -10)
+    icon.BackgroundTransparency = 1; icon.Image = iconId; icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
     
     local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(1, -80, 1, 0)
-    label.Position = UDim2.new(0, 40, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 14
-    label.TextColor3 = Color3.fromRGB(220, 220, 220)
-    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Size = UDim2.new(1, -80, 1, 0); label.Position = UDim2.new(0, 40, 0, 0)
+    label.BackgroundTransparency = 1; label.Text = name; label.Font = Enum.Font.GothamBold
+    label.TextSize = 14; label.TextColor3 = Color3.fromRGB(220, 220, 220); label.TextXAlignment = Enum.TextXAlignment.Left
     
-    -- Switch
     local switch = Instance.new("Frame", frame)
-    switch.Size = UDim2.new(0, 45, 0, 25)
-    switch.Position = UDim2.new(1, -55, 0.5, -12.5)
-    switch.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    Instance.new("UICorner", switch).CornerRadius = UDim.new(1, 0)
+    switch.Size = UDim2.new(0, 45, 0, 25); switch.Position = UDim2.new(1, -55, 0.5, -12.5)
+    switch.BackgroundColor3 = Color3.fromRGB(80, 80, 80); Instance.new("UICorner", switch).CornerRadius = UDim.new(1, 0)
     
     local thumb = Instance.new("Frame", switch)
-    thumb.Size = UDim2.new(0, 21, 0, 21)
-    thumb.Position = UDim2.new(0, 2, 0.5, -10.5)
-    thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Instance.new("UICorner", thumb).CornerRadius = UDim.new(1, 0)
+    thumb.Size = UDim2.new(0, 21, 0, 21); thumb.Position = UDim2.new(0, 2, 0.5, -10.5)
+    thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Instance.new("UICorner", thumb).CornerRadius = UDim.new(1, 0)
     
     local state = false
     local function updateSwitch()
         switch.BackgroundColor3 = state and Color3.fromRGB(255, 50, 50) or Color3.fromRGB(80, 80, 80)
         thumb.Position = state and UDim2.new(1, -23, 0.5, -10.5) or UDim2.new(0, 2, 0.5, -10.5)
     end
-    updateSwitch()
     
     local btn = Instance.new("TextButton", frame)
-    btn.Size = UDim2.new(1, 0, 1, 0)
-    btn.BackgroundTransparency = 1
-    btn.Text = ""
-    btn.ZIndex = 2
-    
+    btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = ""; btn.ZIndex = 2
     btn.MouseButton1Click:Connect(function()
-        state = not state
-        updateSwitch()
-        callback(state)
+        state = not state; updateSwitch(); callback(state)
     end)
-    
     return function(v) state = v; updateSwitch(); callback(state) end
 end
 
--- Slider com thumb e barra mais grossa
 local function CreateSlider(parent, name, iconId, min, max, default, callback)
     local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, 0, 0, 56)
-    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    frame.BackgroundTransparency = 0.3
+    frame.Size = UDim2.new(1, 0, 0, 56); frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30); frame.BackgroundTransparency = 0.3
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     
     local icon = Instance.new("ImageLabel", frame)
-    icon.Size = UDim2.new(0, 16, 0, 16)
-    icon.Position = UDim2.new(0, 10, 0, 8)
-    icon.BackgroundTransparency = 1
-    icon.Image = iconId
-    icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
+    icon.Size = UDim2.new(0, 16, 0, 16); icon.Position = UDim2.new(0, 10, 0, 8)
+    icon.BackgroundTransparency = 1; icon.Image = iconId; icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
     
     local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(1, -40, 0, 20)
-    label.Position = UDim2.new(0, 35, 0, 5)
-    label.BackgroundTransparency = 1
-    label.Text = name .. ": " .. tostring(default)
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 12
-    label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Size = UDim2.new(1, -40, 0, 20); label.Position = UDim2.new(0, 35, 0, 5)
+    label.BackgroundTransparency = 1; label.Text = name .. ": " .. tostring(default); label.Font = Enum.Font.GothamBold
+    label.TextSize = 12; label.TextColor3 = Color3.fromRGB(200, 200, 200); label.TextXAlignment = Enum.TextXAlignment.Left
     
-    -- Barra de fundo
     local bar = Instance.new("Frame", frame)
-    bar.Size = UDim2.new(1, -20, 0, 16)
-    bar.Position = UDim2.new(0, 10, 0, 32)
-    bar.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
-    Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
+    bar.Size = UDim2.new(1, -20, 0, 16); bar.Position = UDim2.new(0, 10, 0, 32)
+    bar.BackgroundColor3 = Color3.fromRGB(40, 40, 45); Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
     
-    -- Preenchimento
     local fill = Instance.new("Frame", bar)
-    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0); fill.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
     
-    -- Thumb (bolinha)
     local thumb = Instance.new("Frame", bar)
-    thumb.Size = UDim2.new(0, 18, 0, 18)
-    thumb.Position = UDim2.new((default - min) / (max - min), -9, 0.5, -9)
-    thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Instance.new("UICorner", thumb).CornerRadius = UDim.new(1, 0)
-    local thumbStroke = Instance.new("UIStroke", thumb)
-    thumbStroke.Color = Color3.fromRGB(255, 50, 50)
-    thumbStroke.Thickness = 2
+    thumb.Size = UDim2.new(0, 18, 0, 18); thumb.Position = UDim2.new((default - min) / (max - min), -9, 0.5, -9)
+    thumb.BackgroundColor3 = Color3.fromRGB(255, 255, 255); Instance.new("UICorner", thumb).CornerRadius = UDim.new(1, 0)
     
     local dragging = false
     local function update(input)
         local pos = math.clamp((input.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X, 0, 1)
         local value = math.floor(min + (max - min) * pos * 100) / 100
-        fill.Size = UDim2.new(pos, 0, 1, 0)
-        thumb.Position = UDim2.new(pos, -9, 0.5, -9)
-        label.Text = name .. ": " .. tostring(value)
-        callback(value)
+        fill.Size = UDim2.new(pos, 0, 1, 0); thumb.Position = UDim2.new(pos, -9, 0.5, -9)
+        label.Text = name .. ": " .. tostring(value); callback(value)
     end
     
-    local function onInputBegin(inp)
+    local hitBtn = Instance.new("TextButton", bar)
+    hitBtn.Size = UDim2.new(1, 0, 1, 0); hitBtn.BackgroundTransparency = 1; hitBtn.Text = ""
+    hitBtn.InputBegan:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            update(inp)
-        end
-    end
-    
-    bar.InputBegan:Connect(onInputBegin)
-    thumb.InputBegan:Connect(onInputBegin)
-    UserInputService.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
+            dragging = true; update(inp)
         end
     end)
-    UserInputService.InputChanged:Connect(function(inp)
-        if dragging then update(inp) end
-    end)
+    UserInputService.InputEnded:Connect(function() dragging = false end)
+    UserInputService.InputChanged:Connect(function(inp) if dragging then update(inp) end end)
 end
 
--- Color Picker compacto
+-- Picker travado pro touch do mobile não falhar
 local function BuildRealColorPicker(parent, name, iconId, configRef, configKey)
     local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, 0, 0, 165)
-    frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
-    frame.BackgroundTransparency = 0.3
+    frame.Size = UDim2.new(1, 0, 0, 165); frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30); frame.BackgroundTransparency = 0.3
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     
     local icon = Instance.new("ImageLabel", frame)
-    icon.Size = UDim2.new(0, 20, 0, 20)
-    icon.Position = UDim2.new(0, 10, 0, 10)
-    icon.BackgroundTransparency = 1
-    icon.Image = iconId
-    icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
+    icon.Size = UDim2.new(0, 20, 0, 20); icon.Position = UDim2.new(0, 10, 0, 10)
+    icon.BackgroundTransparency = 1; icon.Image = iconId; icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
     
     local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(1, -50, 0, 20)
-    label.Position = UDim2.new(0, 40, 0, 10)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.Font = Enum.Font.GothamBold
-    label.TextColor3 = Color3.fromRGB(200, 200, 200)
-    label.TextSize = 14
-    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Size = UDim2.new(1, -50, 0, 20); label.Position = UDim2.new(0, 40, 0, 10)
+    label.BackgroundTransparency = 1; label.Text = name; label.Font = Enum.Font.GothamBold
+    label.TextColor3 = Color3.fromRGB(200, 200, 200); label.TextSize = 14; label.TextXAlignment = Enum.TextXAlignment.Left
     
-    -- Área de Saturação/Valor (100x100)
-    local SVArea = Instance.new("ImageButton", frame)
-    SVArea.Size = UDim2.new(0, 100, 0, 100)
-    SVArea.Position = UDim2.new(0, 20, 0, 40)
-    SVArea.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-    SVArea.Image = "rbxassetid://0"
-    SVArea.ZIndex = 1
+    local SVArea = Instance.new("TextButton", frame)
+    SVArea.Size = UDim2.new(0, 100, 0, 100); SVArea.Position = UDim2.new(0, 20, 0, 40)
+    SVArea.BackgroundColor3 = Color3.fromRGB(255, 0, 0); SVArea.Text = ""; SVArea.AutoButtonColor = false; SVArea.Active = true
     Instance.new("UICorner", SVArea).CornerRadius = UDim.new(0, 4)
     
-    -- Gradiente branco
     local whiteGrad = Instance.new("Frame", SVArea)
-    whiteGrad.Size = UDim2.new(1, 0, 1, 0)
-    whiteGrad.BackgroundColor3 = Color3.new(1, 1, 1)
-    whiteGrad.BackgroundTransparency = 0.5
-    whiteGrad.ZIndex = 2
-    local whiteGradUI = Instance.new("UIGradient", whiteGrad)
-    whiteGradUI.Color = ColorSequence.new(Color3.new(1,1,1), Color3.new(1,1,1))
-    whiteGradUI.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0), NumberSequenceKeypoint.new(1,1)})
+    whiteGrad.Size = UDim2.new(1, 0, 1, 0); whiteGrad.BackgroundColor3 = Color3.new(1, 1, 1); whiteGrad.BackgroundTransparency = 0.5; whiteGrad.ZIndex = 2
+    local whiteGradUI = Instance.new("UIGradient", whiteGrad); whiteGradUI.Color = ColorSequence.new(Color3.new(1,1,1), Color3.new(1,1,1)); whiteGradUI.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0), NumberSequenceKeypoint.new(1,1)})
     
-    -- Gradiente preto
     local blackGrad = Instance.new("Frame", SVArea)
-    blackGrad.Size = UDim2.new(1, 0, 1, 0)
-    blackGrad.BackgroundColor3 = Color3.new(0, 0, 0)
-    blackGrad.BackgroundTransparency = 0.5
-    blackGrad.ZIndex = 3
-    local blackGradUI = Instance.new("UIGradient", blackGrad)
-    blackGradUI.Rotation = 90
-    blackGradUI.Color = ColorSequence.new(Color3.new(0,0,0), Color3.new(0,0,0))
-    blackGradUI.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0), NumberSequenceKeypoint.new(1,1)})
+    blackGrad.Size = UDim2.new(1, 0, 1, 0); blackGrad.BackgroundColor3 = Color3.new(0, 0, 0); blackGrad.BackgroundTransparency = 0.5; blackGrad.ZIndex = 3
+    local blackGradUI = Instance.new("UIGradient", blackGrad); blackGradUI.Rotation = 90; blackGradUI.Color = ColorSequence.new(Color3.new(0,0,0), Color3.new(0,0,0)); blackGradUI.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0), NumberSequenceKeypoint.new(1,1)})
     
-    -- Cursor SV
     local SVCursor = Instance.new("Frame", SVArea)
-    SVCursor.Size = UDim2.new(0, 8, 0, 8)
-    SVCursor.Position = UDim2.new(1, -4, 0, -4)
-    SVCursor.BackgroundColor3 = Color3.new(1, 1, 1)
-    SVCursor.ZIndex = 4
+    SVCursor.Size = UDim2.new(0, 8, 0, 8); SVCursor.Position = UDim2.new(1, -4, 0, -4); SVCursor.BackgroundColor3 = Color3.new(1, 1, 1); SVCursor.ZIndex = 4
     Instance.new("UICorner", SVCursor).CornerRadius = UDim.new(1, 0)
-    local cursorStroke = Instance.new("UIStroke", SVCursor)
-    cursorStroke.Color = Color3.new(0, 0, 0)
-    cursorStroke.Thickness = 1
     
-    -- Barra de Matiz (15x100)
-    local HueArea = Instance.new("ImageButton", frame)
-    HueArea.Size = UDim2.new(0, 15, 0, 100)
-    HueArea.Position = UDim2.new(0, 130, 0, 40)
-    HueArea.BackgroundColor3 = Color3.new(1, 1, 1)
-    HueArea.ZIndex = 1
+    local HueArea = Instance.new("TextButton", frame)
+    HueArea.Size = UDim2.new(0, 15, 0, 100); HueArea.Position = UDim2.new(0, 130, 0, 40)
+    HueArea.BackgroundColor3 = Color3.new(1, 1, 1); HueArea.Text = ""; HueArea.AutoButtonColor = false; HueArea.Active = true
     Instance.new("UICorner", HueArea).CornerRadius = UDim.new(0, 4)
+    
     local hueGrad = Instance.new("UIGradient", HueArea)
     hueGrad.Rotation = 90
     hueGrad.Color = ColorSequence.new({
-        NumberSequenceKeypoint.new(0, Color3.fromRGB(255,0,0)),
-        NumberSequenceKeypoint.new(0.16, Color3.fromRGB(255,255,0)),
-        NumberSequenceKeypoint.new(0.33, Color3.fromRGB(0,255,0)),
-        NumberSequenceKeypoint.new(0.5, Color3.fromRGB(0,255,255)),
-        NumberSequenceKeypoint.new(0.66, Color3.fromRGB(0,0,255)),
-        NumberSequenceKeypoint.new(0.83, Color3.fromRGB(255,0,255)),
+        NumberSequenceKeypoint.new(0, Color3.fromRGB(255,0,0)), NumberSequenceKeypoint.new(0.16, Color3.fromRGB(255,255,0)),
+        NumberSequenceKeypoint.new(0.33, Color3.fromRGB(0,255,0)), NumberSequenceKeypoint.new(0.5, Color3.fromRGB(0,255,255)),
+        NumberSequenceKeypoint.new(0.66, Color3.fromRGB(0,0,255)), NumberSequenceKeypoint.new(0.83, Color3.fromRGB(255,0,255)),
         NumberSequenceKeypoint.new(1, Color3.fromRGB(255,0,0))
     })
     
     local HueCursor = Instance.new("Frame", HueArea)
-    HueCursor.Size = UDim2.new(1, 4, 0, 4)
-    HueCursor.Position = UDim2.new(0, -2, 0, -2)
-    HueCursor.BackgroundColor3 = Color3.new(1, 1, 1)
-    HueCursor.ZIndex = 2
-    local hueCursorStroke = Instance.new("UIStroke", HueCursor)
-    hueCursorStroke.Color = Color3.new(0, 0, 0)
-    hueCursorStroke.Thickness = 1
+    HueCursor.Size = UDim2.new(1, 4, 0, 4); HueCursor.Position = UDim2.new(0, -2, 0, -2); HueCursor.BackgroundColor3 = Color3.new(1, 1, 1); HueCursor.ZIndex = 2
     
-    -- Preview (50x50)
     local Preview = Instance.new("Frame", frame)
-    Preview.Size = UDim2.new(0, 50, 0, 50)
-    Preview.Position = UDim2.new(0, 160, 0, 65)
-    Preview.BackgroundColor3 = configRef[configKey]
-    Preview.ZIndex = 1
+    Preview.Size = UDim2.new(0, 50, 0, 50); Preview.Position = UDim2.new(0, 160, 0, 65)
+    Preview.BackgroundColor3 = configRef[configKey]; Preview.ZIndex = 1
     Instance.new("UICorner", Preview).CornerRadius = UDim.new(0, 4)
-    local previewStroke = Instance.new("UIStroke", Preview)
-    previewStroke.Color = Color3.new(1, 1, 1)
-    previewStroke.Thickness = 1
     
     local h, s, v = 1, 1, 1
     local function UpdateColor()
         local c = Color3.fromHSV(h, s, v)
-        Preview.BackgroundColor3 = c
-        configRef[configKey] = c
+        Preview.BackgroundColor3 = c; configRef[configKey] = c
     end
     
     local dragSV, dragHue = false, false
-    local function onSVInput(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-            dragSV = true
-            local mx = math.clamp(inp.Position.X - SVArea.AbsolutePosition.X, 0, SVArea.AbsoluteSize.X)
-            local my = math.clamp(inp.Position.Y - SVArea.AbsolutePosition.Y, 0, SVArea.AbsoluteSize.Y)
-            SVCursor.Position = UDim2.new(0, mx - 4, 0, my - 4)
-            s = mx / SVArea.AbsoluteSize.X
-            v = 1 - (my / SVArea.AbsoluteSize.Y)
-            UpdateColor()
-        end
-    end
-    local function onHueInput(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-            dragHue = true
-            local my = math.clamp(inp.Position.Y - HueArea.AbsolutePosition.Y, 0, HueArea.AbsoluteSize.Y)
-            HueCursor.Position = UDim2.new(0, -2, 0, my - 2)
-            h = 1 - (my / HueArea.AbsoluteSize.Y)
-            SVArea.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
-            UpdateColor()
-        end
-    end
-    
-    SVArea.InputBegan:Connect(onSVInput)
-    HueArea.InputBegan:Connect(onHueInput)
-    
-    UserInputService.InputEnded:Connect(function(inp)
-        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-            dragSV = false
-            dragHue = false
-        end
+    SVArea.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then dragSV = true end
     end)
+    HueArea.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then dragHue = true end
+    end)
+    UserInputService.InputEnded:Connect(function() dragSV = false; dragHue = false end)
     
     UserInputService.InputChanged:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
@@ -711,14 +557,12 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey)
                 local mx = math.clamp(inp.Position.X - SVArea.AbsolutePosition.X, 0, SVArea.AbsoluteSize.X)
                 local my = math.clamp(inp.Position.Y - SVArea.AbsolutePosition.Y, 0, SVArea.AbsoluteSize.Y)
                 SVCursor.Position = UDim2.new(0, mx - 4, 0, my - 4)
-                s = mx / SVArea.AbsoluteSize.X
-                v = 1 - (my / SVArea.AbsoluteSize.Y)
+                s = mx / SVArea.AbsoluteSize.X; v = 1 - (my / SVArea.AbsoluteSize.Y)
                 UpdateColor()
             elseif dragHue then
                 local my = math.clamp(inp.Position.Y - HueArea.AbsolutePosition.Y, 0, HueArea.AbsoluteSize.Y)
                 HueCursor.Position = UDim2.new(0, -2, 0, my - 2)
-                h = 1 - (my / HueArea.AbsoluteSize.Y)
-                SVArea.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+                h = 1 - (my / HueArea.AbsoluteSize.Y); SVArea.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
                 UpdateColor()
             end
         end
@@ -726,83 +570,47 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey)
 end
 
 -- ========== CRIAÇÃO DOS CONTROLES NAS ABAS ==========
-
 -- Aba AIM
-CreateToggle(tabAim, "Aimbot Master", "rbxassetid://6031763426", function(s) Config.Aimbot.Enabled = s end)
-CreateSlider(tabAim, "Smoothness", "rbxassetid://6031302821", 0.01, 1, 1, function(v) Config.Aimbot.Smoothness = v end)
-CreateToggle(tabAim, "Wall Check", "rbxassetid://6031265976", function(s) Config.Aimbot.WallCheck = s end)
-CreateToggle(tabAim, "Random Hitbox", "rbxassetid://6031068433", function(s) Config.Aimbot.RandomHitbox = s end)
+CreateToggle(tabAim, "Aimbot Master", "rbxassetid://3944680095", function(s) Config.Aimbot.Enabled = s end)
+CreateSlider(tabAim, "Smoothness", "rbxassetid://3944680095", 0.01, 1, 1, function(v) Config.Aimbot.Smoothness = v end)
+CreateToggle(tabAim, "Wall Check", "rbxassetid://7733658504", function(s) Config.Aimbot.WallCheck = s end)
+CreateToggle(tabAim, "Random Hitbox", "rbxassetid://3944680095", function(s) Config.Aimbot.RandomHitbox = s end)
 
 -- Aba ESP
-CreateToggle(tabESP, "Box ESP", "rbxassetid://6031201502", function(s) Config.ESP.Boxes = s end)
-CreateToggle(tabESP, "Tracers", "rbxassetid://6031302821", function(s) Config.ESP.Tracers = s end)
-CreateToggle(tabESP, "Skeleton", "rbxassetid://6031932273", function(s) Config.ESP.Skeleton = s end)
-CreateToggle(tabESP, "Health Text", "rbxassetid://6031094359", function(s) Config.ESP.HealthText = s end)
-BuildRealColorPicker(tabESP, "ESP Color", "rbxassetid://6031072946", Config.ESP, "Color")
+CreateToggle(tabESP, "Box ESP", "rbxassetid://7733658504", function(s) Config.ESP.Boxes = s end)
+CreateToggle(tabESP, "Tracers", "rbxassetid://7733658504", function(s) Config.ESP.Tracers = s end)
+CreateToggle(tabESP, "Skeleton", "rbxassetid://7733658504", function(s) Config.ESP.Skeleton = s end)
+CreateToggle(tabESP, "Health Text", "rbxassetid://7733658504", function(s) Config.ESP.HealthText = s end)
+BuildRealColorPicker(tabESP, "ESP Color", "rbxassetid://7733658504", Config.ESP, "Color")
 
 -- Aba FOV
-CreateToggle(tabFOV, "Draw FOV", "rbxassetid://6031232211", function(s) Config.FOV.Visible = s end)
-CreateSlider(tabFOV, "FOV Radius", "rbxassetid://6031232211", 50, 500, 150, function(v) Config.FOV.Radius = v end)
-BuildRealColorPicker(tabFOV, "FOV Color", "rbxassetid://6031072946", Config.FOV, "Color") 
+CreateToggle(tabFOV, "Draw FOV", "rbxassetid://8997385940", function(s) Config.FOV.Visible = s end)
+CreateSlider(tabFOV, "FOV Radius", "rbxassetid://8997385940", 50, 500, 150, function(v) Config.FOV.Radius = v end)
+BuildRealColorPicker(tabFOV, "FOV Color", "rbxassetid://8997385940", Config.FOV, "Color") 
 
--- Função auxiliar para botões de ação
+local ConfigName = "EZ_MOBILE_CFG.json"
 local function CreateActionBtn(parent, name, iconId, callback)
     local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, 0, 0, 44)
-    frame.BackgroundColor3 = Color3.fromRGB(40, 20, 25)
-    frame.BackgroundTransparency = 0.3
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-
+    frame.Size = UDim2.new(1, 0, 0, 44); frame.BackgroundColor3 = Color3.fromRGB(40, 20, 25); frame.BackgroundTransparency = 0.3; Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     local icon = Instance.new("ImageLabel", frame)
-    icon.Size = UDim2.new(0, 20, 0, 20)
-    icon.Position = UDim2.new(0, 10, 0.5, -10)
-    icon.BackgroundTransparency = 1
-    icon.Image = iconId
-    icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
-
+    icon.Size = UDim2.new(0, 20, 0, 20); icon.Position = UDim2.new(0, 10, 0.5, -10); icon.BackgroundTransparency = 1; icon.Image = iconId; icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
     local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(1, -80, 1, 0)
-    label.Position = UDim2.new(0, 40, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 14
-    label.TextColor3 = Color3.fromRGB(220, 220, 220)
-    label.TextXAlignment = Enum.TextXAlignment.Left
-
+    label.Size = UDim2.new(1, -80, 1, 0); label.Position = UDim2.new(0, 40, 0, 0); label.BackgroundTransparency = 1; label.Text = name; label.Font = Enum.Font.GothamBold; label.TextSize = 14; label.TextColor3 = Color3.fromRGB(220, 220, 220); label.TextXAlignment = Enum.TextXAlignment.Left
     local btn = Instance.new("TextButton", frame)
-    btn.Size = UDim2.new(1, 0, 1, 0)
-    btn.BackgroundTransparency = 1
-    btn.Text = ""
-    btn.ZIndex = 2
+    btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = ""; btn.ZIndex = 2
     btn.MouseButton1Click:Connect(callback)
 end
 
--- Agora sim, adicione os botões na aba FOV
-local ConfigName = "EZ_MOBILE_CFG.json"
-
-CreateActionBtn(tabFOV, "Save Config", "rbxassetid://6031280882", function()
+CreateActionBtn(tabFOV, "Save Config", "rbxassetid://8997385940", function()
     if writefile then
-        local saveCfg = {
-            Aimbot = Config.Aimbot,
-            FOV = {Visible = Config.FOV.Visible, Radius = Config.FOV.Radius},
-            ESP = {Boxes = Config.ESP.Boxes, Tracers = Config.ESP.Tracers, Skeleton = Config.ESP.Skeleton, HealthText = Config.ESP.HealthText}
-        }
+        local saveCfg = {Aimbot = Config.Aimbot, FOV = {Visible = Config.FOV.Visible, Radius = Config.FOV.Radius}, ESP = {Boxes = Config.ESP.Boxes, Tracers = Config.ESP.Tracers, Skeleton = Config.ESP.Skeleton, HealthText = Config.ESP.HealthText}}
         writefile(ConfigName, HttpService:JSONEncode(saveCfg))
     end
 end)
 
-CreateActionBtn(tabFOV, "Load Config", "rbxassetid://6031236746", function()
+CreateActionBtn(tabFOV, "Load Config", "rbxassetid://8997385940", function()
     if readfile and isfile and isfile(ConfigName) then
         local saved = HttpService:JSONDecode(readfile(ConfigName))
-        if saved then
-            Config.Aimbot = saved.Aimbot
-            Config.FOV.Visible = saved.FOV.Visible
-            Config.FOV.Radius = saved.FOV.Radius
-            Config.ESP.Boxes = saved.ESP.Boxes
-            Config.ESP.Tracers = saved.ESP.Tracers
-            Config.ESP.Skeleton = saved.ESP.Skeleton
-            Config.ESP.HealthText = saved.ESP.HealthText
-        end
+        if saved then Config.Aimbot = saved.Aimbot; Config.FOV.Visible = saved.FOV.Visible; Config.FOV.Radius = saved.FOV.Radius; Config.ESP.Boxes = saved.ESP.Boxes; Config.ESP.Tracers = saved.ESP.Tracers; Config.ESP.Skeleton = saved.ESP.Skeleton; Config.ESP.HealthText = saved.ESP.HealthText end
     end
 end)
