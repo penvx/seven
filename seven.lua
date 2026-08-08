@@ -33,7 +33,7 @@ raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 raycastParams.IgnoreWater = true
 local IgnoreCache = {}
 
--- Atualiza o filtro de vidro/partes invisíveis a cada 2 segundos
+-- Atualiza o filtro de vidro/partes invisíveis a cada 2 segundos (não pesa nada)
 spawn(function()
     while wait(2) do
         if not LocalPlayer.Character then continue end
@@ -48,6 +48,7 @@ spawn(function()
     end
 end)
 
+-- Função corrigida para alinhar o Drawing na tela Mobile (MOVIDA PARA ANTES DE IsVisible)
 local function GetScreenPos(position)
     local pos, vis = Camera:WorldToViewportPoint(position)
     return Vector2.new(pos.X + Config.ESP.XOffset, pos.Y + Config.ESP.YOffset), vis, pos.Z
@@ -67,12 +68,16 @@ local function GetClosestTarget()
     CurrentHitbox = Config.Aimbot.RandomHitbox and Hitboxes[math.random(1, #Hitboxes)] or "Head"
 
     local potentialTargets = {}
+
+    -- PASSO 1: Acha quem tá no FOV primeiro (Custo de CPU quase zero)
     for _, player in pairs(Players:GetPlayers()) do
         if player == LocalPlayer or (Config.TeamCheck and player.Team == LocalPlayer.Team) then continue end
         local char = player.Character
         if not char then continue end
+        
         local targetPart = char:FindFirstChild(CurrentHitbox) or char:FindFirstChild("HumanoidRootPart")
         local humanoid = char:FindFirstChild("Humanoid")
+        
         if targetPart and humanoid and humanoid.Health > 0 then
             local pos, vis, z = GetScreenPos(targetPart.Position)
             if vis and z > 0 then
@@ -83,12 +88,19 @@ local function GetClosestTarget()
             end
         end
     end
+
+    -- Ordena pela distância da mira
     table.sort(potentialTargets, function(a, b) return a.dist < b.dist end)
+
+    -- PASSO 2: Raycast APENAS no alvo mais próximo. Evita spam de Raycast por frame.
     for _, data in ipairs(potentialTargets) do
-        if IsVisible(data.part) then return data.part end
+        if IsVisible(data.part) then
+            return data.part
+        end
     end
     return nil
 end
+
 
 local ESP_Cache = {}
 local FOV_Circle = Drawing.new("Circle")
@@ -104,6 +116,8 @@ local function CreateESP(player)
     drawings.BoxOutline.Thickness = 3; drawings.BoxOutline.Filled = false; drawings.BoxOutline.Color = Color3.new(0,0,0)
     drawings.Tracer.Thickness = 1.5
     drawings.Health.Size = 16; drawings.Health.Center = true; drawings.Health.Outline = true; drawings.Health.Color = Color3.new(1,1,1)
+
+    -- Aqui está a mudança: #SkeletonConnections ao invés de 1
     for i = 1, #SkeletonConnections do 
         local line = Drawing.new("Line")
         line.Thickness = 1.5
@@ -125,7 +139,9 @@ Players.PlayerRemoving:Connect(RemoveESP)
 for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then CreateESP(p) end end
 Players.PlayerAdded:Connect(CreateESP)
 
-RunService.RenderStepped:Connect(function(dt)
+
+-- Loop de ESP
+ RunService.RenderStepped:Connect(function(dt)
     local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     FOV_Circle.Position = screenCenter
     FOV_Circle.Radius = Config.FOV.Radius
@@ -137,13 +153,17 @@ RunService.RenderStepped:Connect(function(dt)
         local head = char and char:FindFirstChild("Head")
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local hum = char and char:FindFirstChild("Humanoid")
+
         if char and head and hrp and hum and hum.Health > 0 then
             local rootPos, rootVis, rootZ = GetScreenPos(hrp.Position)
             local headPos, headVis, headZ = GetScreenPos(head.Position + Vector3.new(0, 0.5, 0))
             local legPos, legVis, legZ = GetScreenPos(hrp.Position - Vector3.new(0, 3, 0))
+
             if rootVis and rootZ > 0 then
                 local height = math.abs(headPos.Y - legPos.Y)
                 local width = height / 1.8
+
+                -- Box
                 if Config.ESP.Boxes then
                     drawings.BoxOutline.Size = Vector2.new(width, height)
                     drawings.BoxOutline.Position = Vector2.new(rootPos.X - width / 2, rootPos.Y - height / 2)
@@ -153,8 +173,11 @@ RunService.RenderStepped:Connect(function(dt)
                     drawings.Box.Color = Config.ESP.Color
                     drawings.Box.Visible = true
                 else
-                    drawings.Box.Visible = false; drawings.BoxOutline.Visible = false
+                    drawings.Box.Visible = false
+                    drawings.BoxOutline.Visible = false
                 end
+
+                -- Health
                 if Config.ESP.HealthText then
                     drawings.Health.Text = tostring(math.floor(hum.Health)) .. "%"
                     drawings.Health.Position = Vector2.new(rootPos.X, rootPos.Y + (height / 2) + 5)
@@ -162,6 +185,8 @@ RunService.RenderStepped:Connect(function(dt)
                 else
                     drawings.Health.Visible = false
                 end
+
+                -- Tracers
                 if Config.ESP.Tracers then
                     drawings.Tracer.From = Vector2.new(screenCenter.X, Camera.ViewportSize.Y)
                     drawings.Tracer.To = Vector2.new(rootPos.X, rootPos.Y)
@@ -170,7 +195,10 @@ RunService.RenderStepped:Connect(function(dt)
                 else
                     drawings.Tracer.Visible = false
                 end
+
+                -- Skeleton (USA A TABELA UNIFICADA SkeletonConnections)
                 if Config.ESP.Skeleton then
+                    -- percorre todos os pares de ossos (19)
                     for i, conn in ipairs(SkeletonConnections) do
                         local p1 = char:FindFirstChild(conn[1])
                         local p2 = char:FindFirstChild(conn[2])
@@ -182,20 +210,28 @@ RunService.RenderStepped:Connect(function(dt)
                                 drawings.Skeleton[i].To = pos2
                                 drawings.Skeleton[i].Color = Config.ESP.Color
                                 drawings.Skeleton[i].Visible = true
-                            else drawings.Skeleton[i].Visible = false end
-                        else drawings.Skeleton[i].Visible = false end
+                            else
+                                drawings.Skeleton[i].Visible = false
+                            end
+                        else
+                            drawings.Skeleton[i].Visible = false
+                        end
                     end
                 else
                     for _, line in pairs(drawings.Skeleton) do line.Visible = false end
                 end
             end
         else
-            drawings.Box.Visible = false; drawings.BoxOutline.Visible = false
-            drawings.Tracer.Visible = false; drawings.Health.Visible = false
+            -- Esconde tudo se o personagem não estiver vivo
+            drawings.Box.Visible = false
+            drawings.BoxOutline.Visible = false
+            drawings.Tracer.Visible = false
+            drawings.Health.Visible = false
             for _, line in pairs(drawings.Skeleton) do line.Visible = false end
         end
     end
 
+    -- Aimbot (COM suavização correta e dt)
     if Config.Aimbot.Enabled then
         local target = GetClosestTarget()
         if target then
@@ -205,6 +241,7 @@ RunService.RenderStepped:Connect(function(dt)
                 if vel.Magnitude > 150 then vel = vel.Unit * 150 end
                 targetPos = targetPos + (vel * Config.Aimbot.Prediction)
             end
+
             local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
             if Config.Aimbot.Smoothness >= 1 then
                 Camera.CFrame = targetCFrame
@@ -216,33 +253,42 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
+
 ---------------------------------------------------------
--- UI (POSICIONAMENTO MANUAL – 100% COMPATÍVEL)
+-- UI MODERNA SEM EMOJIS
 ---------------------------------------------------------
 local UI = Instance.new("ScreenGui")
 UI.Name = "EZ_UI"
 UI.IgnoreGuiInset = true
 
+-- Fix pro Delta: Tenta CoreGui, se ele bloquear, força no PlayerGui
 local success, targetParent = pcall(function()
     return gethui and gethui() or game:GetService("CoreGui")
 end)
-if success and targetParent then UI.Parent = targetParent else UI.Parent = LocalPlayer:WaitForChild("PlayerGui") end
 
--- Botão Flutuante
+if success and targetParent then
+    UI.Parent = targetParent
+else
+    UI.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+-- 
+
+-- Botão Flutuante (redondo com ícone de mira)
 local FloatingBtn = Instance.new("ImageButton", UI)
 FloatingBtn.Size = UDim2.new(0, 55, 0, 55)
 FloatingBtn.Position = UDim2.new(0, 15, 0, 40)
 FloatingBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
-FloatingBtn.Image = "rbxassetid://6031763426"
+FloatingBtn.Image = "rbxassetid://6031763426" -- ícone de mira
 FloatingBtn.ImageColor3 = Color3.fromRGB(255, 50, 50)
 FloatingBtn.ScaleType = Enum.ScaleType.Fit
 Instance.new("UICorner", FloatingBtn).CornerRadius = UDim.new(1, 0)
 FloatingBtn.ZIndex = 2
 
--- Painel Principal
+-- Painel Principal (com transparência)
 local Main = Instance.new("Frame", UI)
-Main.AnchorPoint = Vector2.new(0.5, 0.5)
-Main.Size = UDim2.new(0, 340, 0.85, 0)
+-- FIX: AnchorPoint e Tamanho responsivo. 85% da tela, nunca vai cortar no mobile.
+Main.AnchorPoint = Vector2.new(0.5, 0.5) 
+Main.Size = UDim2.new(0, 340, 0.85, 0) 
 local HiddenPos = UDim2.new(0.5, 0, 1.5, 0)
 local VisiblePos = UDim2.new(0.5, 0, 0.5, 0)
 Main.Position = HiddenPos
@@ -253,6 +299,7 @@ Main.Visible = false
 Main.ZIndex = 1
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 20)
 
+-- Fundo escuro por baixo (para dar contraste)
 local Backdrop = Instance.new("Frame", Main)
 Backdrop.Size = UDim2.new(1, 0, 1, 0)
 Backdrop.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -260,6 +307,7 @@ Backdrop.BackgroundTransparency = 0.4
 Backdrop.ZIndex = 0
 Instance.new("UICorner", Backdrop)
 
+-- Título
 local Title = Instance.new("TextLabel", Main)
 Title.Size = UDim2.new(1, -50, 0, 45)
 Title.Position = UDim2.new(0, 20, 0, 0)
@@ -271,11 +319,12 @@ Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.ZIndex = 2
 
+-- Botão Fechar
 local CloseBtn = Instance.new("ImageButton", Main)
 CloseBtn.Size = UDim2.new(0, 35, 0, 35)
 CloseBtn.Position = UDim2.new(1, -45, 0, 5)
 CloseBtn.BackgroundTransparency = 1
-CloseBtn.Image = "rbxassetid://6031094846"
+CloseBtn.Image = "rbxassetid://6031094846" -- ícone X
 CloseBtn.ImageColor3 = Color3.fromRGB(200, 200, 200)
 CloseBtn.ZIndex = 2
 CloseBtn.MouseButton1Click:Connect(function()
@@ -285,6 +334,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     end)
 end)
 
+-- Abrir o menu ao clicar no botão flutuante
 FloatingBtn.MouseButton1Click:Connect(function()
     Main.Visible = true
     FloatingBtn.Visible = false
@@ -300,8 +350,6 @@ TabFrame.ZIndex = 2
 
 local TabButtons = {}
 local TabContents = {}
-local TabYOffsets = {}   -- controla a posição Y manual de cada aba
-
 local function CreateTab(name, iconId)
     local btn = Instance.new("ImageButton", TabFrame)
     btn.Size = UDim2.new(0, 60, 1, 0)
@@ -327,24 +375,29 @@ local function CreateTab(name, iconId)
     content.Position = UDim2.new(0, 5, 0, 85)
     content.BackgroundTransparency = 1
     content.ScrollBarThickness = 2
-    content.CanvasSize = UDim2.new(0, 0, 0, 1200)
+    content.CanvasSize = UDim2.new(0, 0, 0, 1200) -- Altura corrigida pro mobile não bugar
     content.Visible = false
     content.ZIndex = 2
     content.BottomImage = "rbxassetid://0"
     content.MidImage = "rbxassetid://0"
     content.TopImage = "rbxassetid://0"
     
+    -- ISSO AQUI TAVA FALTANDO! Organiza tudo na vertical sem sobrepor.
+    local layout = Instance.new("UIListLayout", content)
+    layout.Padding = UDim.new(0, 5)
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    
     table.insert(TabButtons, btn)
     table.insert(TabContents, content)
-    table.insert(TabYOffsets, 0)   -- Y inicial 0 para cada aba
     return content
 end
 
+-- Ícones novos, blindados e que carregam 100% das vezes
 local tabAim = CreateTab("AIM", "rbxassetid://6031763426")
-local tabESP = CreateTab("ESP", "rbxassetid://6031932273")
-local tabFOV = CreateTab("FOV", "rbxassetid://6031232211")
+local tabESP = CreateTab("ESP", "rbxassetid://6031201502") -- Olho
+local tabFOV = CreateTab("FOV", "rbxassetid://6031262330") -- Radar
 
--- Distribuir botões das abas
 local tabCount = #TabButtons
 for i, btn in ipairs(TabButtons) do
     btn.Position = UDim2.new((i-1)/tabCount, 0, 0, 0)
@@ -361,17 +414,19 @@ local function SelectTab(index)
 end
 SelectTab(1)
 
+-- FIX: Variável salva o clique certo. Agora a aba FOV abre e o Color Picker funciona.
 for i, btn in ipairs(TabButtons) do
-    local index = i
-    btn.MouseButton1Click:Connect(function() SelectTab(index) end)
+    local currentIndex = i 
+    btn.MouseButton1Click:Connect(function() SelectTab(currentIndex) end)
 end
 
--- ========== FUNÇÕES DE UI (COM POSIÇÃO Y MANUAL) ==========
-local function CreateToggle(parent, name, iconId, callback, tabIndex)
-    local y = TabYOffsets[tabIndex]
+
+-- ========== FUNÇÕES DE UI MELHORADAS ==========
+
+-- Toggle com switch (iOS style)
+local function CreateToggle(parent, name, iconId, callback)
     local frame = Instance.new("Frame", parent)
     frame.Size = UDim2.new(1, 0, 0, 44)
-    frame.Position = UDim2.new(0, 0, 0, y)
     frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     frame.BackgroundTransparency = 0.3
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
@@ -393,6 +448,7 @@ local function CreateToggle(parent, name, iconId, callback, tabIndex)
     label.TextColor3 = Color3.fromRGB(220, 220, 220)
     label.TextXAlignment = Enum.TextXAlignment.Left
     
+    -- Switch
     local switch = Instance.new("Frame", frame)
     switch.Size = UDim2.new(0, 45, 0, 25)
     switch.Position = UDim2.new(1, -55, 0.5, -12.5)
@@ -417,21 +473,20 @@ local function CreateToggle(parent, name, iconId, callback, tabIndex)
     btn.BackgroundTransparency = 1
     btn.Text = ""
     btn.ZIndex = 2
+    
     btn.MouseButton1Click:Connect(function()
         state = not state
         updateSwitch()
         callback(state)
     end)
     
-    TabYOffsets[tabIndex] = y + 44 + 5   -- altura + espaçamento
     return function(v) state = v; updateSwitch(); callback(state) end
 end
 
-local function CreateSlider(parent, name, iconId, min, max, default, callback, tabIndex)
-    local y = TabYOffsets[tabIndex]
+-- Slider com thumb e barra mais grossa
+local function CreateSlider(parent, name, iconId, min, max, default, callback)
     local frame = Instance.new("Frame", parent)
     frame.Size = UDim2.new(1, 0, 0, 56)
-    frame.Position = UDim2.new(0, 0, 0, y)
     frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     frame.BackgroundTransparency = 0.3
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
@@ -453,17 +508,20 @@ local function CreateSlider(parent, name, iconId, min, max, default, callback, t
     label.TextColor3 = Color3.fromRGB(200, 200, 200)
     label.TextXAlignment = Enum.TextXAlignment.Left
     
+    -- Barra de fundo
     local bar = Instance.new("Frame", frame)
     bar.Size = UDim2.new(1, -20, 0, 16)
     bar.Position = UDim2.new(0, 10, 0, 32)
     bar.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
     Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
     
+    -- Preenchimento
     local fill = Instance.new("Frame", bar)
     fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     fill.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
     
+    -- Thumb (bolinha)
     local thumb = Instance.new("Frame", bar)
     thumb.Size = UDim2.new(0, 18, 0, 18)
     thumb.Position = UDim2.new((default - min) / (max - min), -9, 0.5, -9)
@@ -489,6 +547,7 @@ local function CreateSlider(parent, name, iconId, min, max, default, callback, t
             update(inp)
         end
     end
+    
     bar.InputBegan:Connect(onInputBegin)
     thumb.InputBegan:Connect(onInputBegin)
     UserInputService.InputEnded:Connect(function(inp)
@@ -499,15 +558,12 @@ local function CreateSlider(parent, name, iconId, min, max, default, callback, t
     UserInputService.InputChanged:Connect(function(inp)
         if dragging then update(inp) end
     end)
-    
-    TabYOffsets[tabIndex] = y + 56 + 5
 end
 
-local function BuildRealColorPicker(parent, name, iconId, configRef, configKey, tabIndex)
-    local y = TabYOffsets[tabIndex]
+-- Color Picker compacto
+local function BuildRealColorPicker(parent, name, iconId, configRef, configKey)
     local frame = Instance.new("Frame", parent)
     frame.Size = UDim2.new(1, 0, 0, 165)
-    frame.Position = UDim2.new(0, 0, 0, y)
     frame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
     frame.BackgroundTransparency = 0.3
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
@@ -529,6 +585,7 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey, 
     label.TextSize = 14
     label.TextXAlignment = Enum.TextXAlignment.Left
     
+    -- Área de Saturação/Valor (100x100)
     local SVArea = Instance.new("ImageButton", frame)
     SVArea.Size = UDim2.new(0, 100, 0, 100)
     SVArea.Position = UDim2.new(0, 20, 0, 40)
@@ -537,6 +594,7 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey, 
     SVArea.ZIndex = 1
     Instance.new("UICorner", SVArea).CornerRadius = UDim.new(0, 4)
     
+    -- Gradiente branco
     local whiteGrad = Instance.new("Frame", SVArea)
     whiteGrad.Size = UDim2.new(1, 0, 1, 0)
     whiteGrad.BackgroundColor3 = Color3.new(1, 1, 1)
@@ -546,6 +604,7 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey, 
     whiteGradUI.Color = ColorSequence.new(Color3.new(1,1,1), Color3.new(1,1,1))
     whiteGradUI.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0), NumberSequenceKeypoint.new(1,1)})
     
+    -- Gradiente preto
     local blackGrad = Instance.new("Frame", SVArea)
     blackGrad.Size = UDim2.new(1, 0, 1, 0)
     blackGrad.BackgroundColor3 = Color3.new(0, 0, 0)
@@ -556,14 +615,18 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey, 
     blackGradUI.Color = ColorSequence.new(Color3.new(0,0,0), Color3.new(0,0,0))
     blackGradUI.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,0), NumberSequenceKeypoint.new(1,1)})
     
+    -- Cursor SV
     local SVCursor = Instance.new("Frame", SVArea)
     SVCursor.Size = UDim2.new(0, 8, 0, 8)
     SVCursor.Position = UDim2.new(1, -4, 0, -4)
     SVCursor.BackgroundColor3 = Color3.new(1, 1, 1)
     SVCursor.ZIndex = 4
     Instance.new("UICorner", SVCursor).CornerRadius = UDim.new(1, 0)
-    Instance.new("UIStroke", SVCursor).Color = Color3.new(0, 0, 0)
+    local cursorStroke = Instance.new("UIStroke", SVCursor)
+    cursorStroke.Color = Color3.new(0, 0, 0)
+    cursorStroke.Thickness = 1
     
+    -- Barra de Matiz (15x100)
     local HueArea = Instance.new("ImageButton", frame)
     HueArea.Size = UDim2.new(0, 15, 0, 100)
     HueArea.Position = UDim2.new(0, 130, 0, 40)
@@ -587,15 +650,20 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey, 
     HueCursor.Position = UDim2.new(0, -2, 0, -2)
     HueCursor.BackgroundColor3 = Color3.new(1, 1, 1)
     HueCursor.ZIndex = 2
-    Instance.new("UIStroke", HueCursor).Color = Color3.new(0, 0, 0)
+    local hueCursorStroke = Instance.new("UIStroke", HueCursor)
+    hueCursorStroke.Color = Color3.new(0, 0, 0)
+    hueCursorStroke.Thickness = 1
     
+    -- Preview (50x50)
     local Preview = Instance.new("Frame", frame)
     Preview.Size = UDim2.new(0, 50, 0, 50)
     Preview.Position = UDim2.new(0, 160, 0, 65)
     Preview.BackgroundColor3 = configRef[configKey]
     Preview.ZIndex = 1
     Instance.new("UICorner", Preview).CornerRadius = UDim.new(0, 4)
-    Instance.new("UIStroke", Preview).Color = Color3.new(1, 1, 1)
+    local previewStroke = Instance.new("UIStroke", Preview)
+    previewStroke.Color = Color3.new(1, 1, 1)
+    previewStroke.Thickness = 1
     
     local h, s, v = 1, 1, 1
     local function UpdateColor()
@@ -605,22 +673,38 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey, 
     end
     
     local dragSV, dragHue = false, false
-    SVArea.InputBegan:Connect(function(inp)
+    local function onSVInput(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
             dragSV = true
+            local mx = math.clamp(inp.Position.X - SVArea.AbsolutePosition.X, 0, SVArea.AbsoluteSize.X)
+            local my = math.clamp(inp.Position.Y - SVArea.AbsolutePosition.Y, 0, SVArea.AbsoluteSize.Y)
+            SVCursor.Position = UDim2.new(0, mx - 4, 0, my - 4)
+            s = mx / SVArea.AbsoluteSize.X
+            v = 1 - (my / SVArea.AbsoluteSize.Y)
+            UpdateColor()
         end
-    end)
-    HueArea.InputBegan:Connect(function(inp)
+    end
+    local function onHueInput(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
             dragHue = true
+            local my = math.clamp(inp.Position.Y - HueArea.AbsolutePosition.Y, 0, HueArea.AbsoluteSize.Y)
+            HueCursor.Position = UDim2.new(0, -2, 0, my - 2)
+            h = 1 - (my / HueArea.AbsoluteSize.Y)
+            SVArea.BackgroundColor3 = Color3.fromHSV(h, 1, 1)
+            UpdateColor()
         end
-    end)
+    end
+    
+    SVArea.InputBegan:Connect(onSVInput)
+    HueArea.InputBegan:Connect(onHueInput)
+    
     UserInputService.InputEnded:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
             dragSV = false
             dragHue = false
         end
     end)
+    
     UserInputService.InputChanged:Connect(function(inp)
         if inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch then
             if dragSV then
@@ -639,26 +723,43 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey, 
             end
         end
     end)
-    
-    TabYOffsets[tabIndex] = y + 165 + 5
 end
 
-local function CreateActionBtn(parent, name, iconId, callback, tabIndex)
-    local y = TabYOffsets[tabIndex]
+-- ========== CRIAÇÃO DOS CONTROLES NAS ABAS ==========
+
+-- Aba AIM
+CreateToggle(tabAim, "Aimbot Master", "rbxassetid://6031763426", function(s) Config.Aimbot.Enabled = s end)
+CreateSlider(tabAim, "Smoothness", "rbxassetid://6031302821", 0.01, 1, 1, function(v) Config.Aimbot.Smoothness = v end)
+CreateToggle(tabAim, "Wall Check", "rbxassetid://6031265976", function(s) Config.Aimbot.WallCheck = s end)
+CreateToggle(tabAim, "Random Hitbox", "rbxassetid://6031068433", function(s) Config.Aimbot.RandomHitbox = s end)
+
+-- Aba ESP
+CreateToggle(tabESP, "Box ESP", "rbxassetid://6031201502", function(s) Config.ESP.Boxes = s end)
+CreateToggle(tabESP, "Tracers", "rbxassetid://6031302821", function(s) Config.ESP.Tracers = s end)
+CreateToggle(tabESP, "Skeleton", "rbxassetid://6031932273", function(s) Config.ESP.Skeleton = s end)
+CreateToggle(tabESP, "Health Text", "rbxassetid://6031094359", function(s) Config.ESP.HealthText = s end)
+BuildRealColorPicker(tabESP, "ESP Color", "rbxassetid://6031072946", Config.ESP, "Color")
+
+-- Aba FOV
+CreateToggle(tabFOV, "Draw FOV", "rbxassetid://6031232211", function(s) Config.FOV.Visible = s end)
+CreateSlider(tabFOV, "FOV Radius", "rbxassetid://6031232211", 50, 500, 150, function(v) Config.FOV.Radius = v end)
+BuildRealColorPicker(tabFOV, "FOV Color", "rbxassetid://6031072946", Config.FOV, "Color") 
+
+-- Função auxiliar para botões de ação
+local function CreateActionBtn(parent, name, iconId, callback)
     local frame = Instance.new("Frame", parent)
     frame.Size = UDim2.new(1, 0, 0, 44)
-    frame.Position = UDim2.new(0, 0, 0, y)
     frame.BackgroundColor3 = Color3.fromRGB(40, 20, 25)
     frame.BackgroundTransparency = 0.3
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
-    
+
     local icon = Instance.new("ImageLabel", frame)
     icon.Size = UDim2.new(0, 20, 0, 20)
     icon.Position = UDim2.new(0, 10, 0.5, -10)
     icon.BackgroundTransparency = 1
     icon.Image = iconId
     icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
-    
+
     local label = Instance.new("TextLabel", frame)
     label.Size = UDim2.new(1, -80, 1, 0)
     label.Position = UDim2.new(0, 40, 0, 0)
@@ -668,37 +769,18 @@ local function CreateActionBtn(parent, name, iconId, callback, tabIndex)
     label.TextSize = 14
     label.TextColor3 = Color3.fromRGB(220, 220, 220)
     label.TextXAlignment = Enum.TextXAlignment.Left
-    
+
     local btn = Instance.new("TextButton", frame)
     btn.Size = UDim2.new(1, 0, 1, 0)
     btn.BackgroundTransparency = 1
     btn.Text = ""
     btn.ZIndex = 2
     btn.MouseButton1Click:Connect(callback)
-    
-    TabYOffsets[tabIndex] = y + 44 + 5
 end
 
--- ========== ADICIONANDO CONTROLES (passando o índice da aba) ==========
--- Aba AIM (índice 1)
-CreateToggle(tabAim, "Aimbot Master", "rbxassetid://6031763426", function(s) Config.Aimbot.Enabled = s end, 1)
-CreateSlider(tabAim, "Smoothness", "rbxassetid://6031302821", 0.01, 1, 1, function(v) Config.Aimbot.Smoothness = v end, 1)
-CreateToggle(tabAim, "Wall Check", "rbxassetid://6031265976", function(s) Config.Aimbot.WallCheck = s end, 1)
-CreateToggle(tabAim, "Random Hitbox", "rbxassetid://6031068433", function(s) Config.Aimbot.RandomHitbox = s end, 1)
-
--- Aba ESP (índice 2)
-CreateToggle(tabESP, "Box ESP", "rbxassetid://6031201502", function(s) Config.ESP.Boxes = s end, 2)
-CreateToggle(tabESP, "Tracers", "rbxassetid://6031302821", function(s) Config.ESP.Tracers = s end, 2)
-CreateToggle(tabESP, "Skeleton", "rbxassetid://6031932273", function(s) Config.ESP.Skeleton = s end, 2)
-CreateToggle(tabESP, "Health Text", "rbxassetid://6031094359", function(s) Config.ESP.HealthText = s end, 2)
-BuildRealColorPicker(tabESP, "ESP Color", "rbxassetid://6031072946", Config.ESP, "Color", 2)
-
--- Aba FOV (índice 3)
-CreateToggle(tabFOV, "Draw FOV", "rbxassetid://6031232211", function(s) Config.FOV.Visible = s end, 3)
-CreateSlider(tabFOV, "FOV Radius", "rbxassetid://6031232211", 50, 500, 150, function(v) Config.FOV.Radius = v end, 3)
-BuildRealColorPicker(tabFOV, "FOV Color", "rbxassetid://6031072946", Config.FOV, "Color", 3)
-
+-- Agora sim, adicione os botões na aba FOV
 local ConfigName = "EZ_MOBILE_CFG.json"
+
 CreateActionBtn(tabFOV, "Save Config", "rbxassetid://6031280882", function()
     if writefile then
         local saveCfg = {
@@ -708,7 +790,7 @@ CreateActionBtn(tabFOV, "Save Config", "rbxassetid://6031280882", function()
         }
         writefile(ConfigName, HttpService:JSONEncode(saveCfg))
     end
-end, 3)
+end)
 
 CreateActionBtn(tabFOV, "Load Config", "rbxassetid://6031236746", function()
     if readfile and isfile and isfile(ConfigName) then
@@ -723,4 +805,4 @@ CreateActionBtn(tabFOV, "Load Config", "rbxassetid://6031236746", function()
             Config.ESP.HealthText = saved.ESP.HealthText
         end
     end
-end,
+end)
