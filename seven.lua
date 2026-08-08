@@ -48,6 +48,12 @@ spawn(function()
     end
 end)
 
+-- Função corrigida para alinhar o Drawing na tela Mobile (MOVIDA PARA ANTES DE IsVisible)
+local function GetScreenPos(position)
+    local pos, vis = Camera:WorldToViewportPoint(position)
+    return Vector2.new(pos.X + Config.ESP.XOffset, pos.Y + Config.ESP.YOffset), vis, pos.Z
+end
+
 local function IsVisible(targetPart)
     if not Config.Aimbot.WallCheck or not LocalPlayer.Character then return true end
     local origin = Camera.CFrame.Position
@@ -132,11 +138,6 @@ end
 Players.PlayerRemoving:Connect(RemoveESP)
 for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then CreateESP(p) end end
 Players.PlayerAdded:Connect(CreateESP)
--- Função corrigida para alinhar o Drawing na tela Mobile
-local function GetScreenPos(position)
-    local pos, vis = Camera:WorldToViewportPoint(position)
-    return Vector2.new(pos.X + Config.ESP.XOffset, pos.Y + Config.ESP.YOffset), vis, pos.Z
-end
 
 
 -- Loop de ESP
@@ -374,7 +375,7 @@ local function CreateTab(name, iconId)
     content.Position = UDim2.new(0, 5, 0, 85)
     content.BackgroundTransparency = 1
     content.ScrollBarThickness = 2
-    content.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    content.CanvasSize = UDim2.new(0, 0, 0, 1200)  -- FIX: altura grande para rolagem
     content.Visible = false
     content.ZIndex = 2
     content.BottomImage = "rbxassetid://0" 
@@ -413,8 +414,10 @@ local function SelectTab(index)
 end
 SelectTab(1)
 
+-- FIX: closure bug das abas (sempre ia para a última)
 for i, btn in ipairs(TabButtons) do
-    btn.MouseButton1Click:Connect(function() SelectTab(i) end)
+    local index = i
+    btn.MouseButton1Click:Connect(function() SelectTab(index) end)
 end
 
 -- ========== FUNÇÕES DE UI MELHORADAS ==========
