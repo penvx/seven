@@ -9,7 +9,7 @@ local LocalPlayer = Players.LocalPlayer
 -- Configurações Globais
 local Config = {
     Aimbot = { Enabled = false, Smoothness = 1, Prediction = 0.0, WallCheck = true, RandomHitbox = false },
-    ESP = { Boxes = false, Tracers = false, Skeleton = false, HealthText = false, Color = Color3.fromRGB(255, 50, 50) }, 
+    ESP = { Boxes = false, Tracers = false, Skeleton = false, HealthText = false, Color = Color3.fromRGB(255, 50, 50), XOffset = 0, YOffset = 0 },
     FOV = { Visible = false, Radius = 150, Color = Color3.fromRGB(255, 255, 255) },
     TeamCheck = false
 }
@@ -17,17 +17,15 @@ local Config = {
 local Hitboxes = {"Head", "UpperTorso", "HumanoidRootPart", "LowerTorso"}
 local CurrentHitbox = "Head"
 
-local Skeletons = {
-    R15 = {
-        {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
-        {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
-        {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
-        {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
-        {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"}
-    },
-    R6 = {
-        {"Head", "Torso"}, {"Torso", "Right Arm"}, {"Torso", "Left Arm"}, {"Torso", "Right Leg"}, {"Torso", "Left Leg"}
-    }
+local SkeletonConnections = {
+    -- R15
+    {"Head", "UpperTorso"}, {"UpperTorso", "LowerTorso"},
+    {"UpperTorso", "RightUpperArm"}, {"RightUpperArm", "RightLowerArm"}, {"RightLowerArm", "RightHand"},
+    {"UpperTorso", "LeftUpperArm"}, {"LeftUpperArm", "LeftLowerArm"}, {"LeftLowerArm", "LeftHand"},
+    {"LowerTorso", "RightUpperLeg"}, {"RightUpperLeg", "RightLowerLeg"}, {"RightLowerLeg", "RightFoot"},
+    {"LowerTorso", "LeftUpperLeg"}, {"LeftUpperLeg", "LeftLowerLeg"}, {"LeftLowerLeg", "LeftFoot"},
+    -- R6
+    {"Head", "Torso"}, {"Torso", "Right Arm"}, {"Torso", "Left Arm"}, {"Torso", "Right Leg"}, {"Torso", "Left Leg"}
 }
 
 local raycastParams = RaycastParams.new()
@@ -36,8 +34,8 @@ raycastParams.IgnoreWater = true
 local IgnoreCache = {}
 
 -- Atualiza o filtro de vidro/partes invisíveis a cada 2 segundos (não pesa nada)
-task.spawn(function()
-    while task.wait(2) do
+spawn(function()
+    while wait(2) do
         if not LocalPlayer.Character then continue end
         local ignore = {LocalPlayer.Character, Camera}
         for _, v in pairs(workspace:GetDescendants()) do
@@ -113,7 +111,8 @@ local function CreateESP(player)
     drawings.Tracer.Thickness = 1.5
     drawings.Health.Size = 16; drawings.Health.Center = true; drawings.Health.Outline = true; drawings.Health.Color = Color3.new(1,1,1)
 
-    for i = 1, 14 do 
+    -- Aqui está a mudança: #SkeletonConnections ao invés de 1
+    for i = 1, #SkeletonConnections do 
         local line = Drawing.new("Line")
         line.Thickness = 1.5
         table.insert(drawings.Skeleton, line)
@@ -133,13 +132,10 @@ end
 Players.PlayerRemoving:Connect(RemoveESP)
 for _, p in pairs(Players:GetPlayers()) do if p ~= LocalPlayer then CreateESP(p) end end
 Players.PlayerAdded:Connect(CreateESP)
-
 -- Função corrigida para alinhar o Drawing na tela Mobile
 local function GetScreenPos(position)
     local pos, vis = Camera:WorldToViewportPoint(position)
-    local inset = game:GetService("GuiService"):GetGuiInset()
-    -- Subtrai o Notch/Topbar globalmente, sem o usuário precisar de slider
-    return Vector2.new(pos.X + inset.X, pos.Y + inset.Y), vis, pos.Z
+    return Vector2.new(pos.X + Config.ESP.XOffset, pos.Y + Config.ESP.YOffset), vis, pos.Z
 end
 
 
@@ -156,12 +152,12 @@ end
         local head = char and char:FindFirstChild("Head")
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local hum = char and char:FindFirstChild("Humanoid")
-        
+
         if char and head and hrp and hum and hum.Health > 0 then
             local rootPos, rootVis, rootZ = GetScreenPos(hrp.Position)
             local headPos, headVis, headZ = GetScreenPos(head.Position + Vector3.new(0, 0.5, 0))
             local legPos, legVis, legZ = GetScreenPos(hrp.Position - Vector3.new(0, 3, 0))
-            
+
             if rootVis and rootZ > 0 then
                 local height = math.abs(headPos.Y - legPos.Y)
                 local width = height / 1.8
@@ -179,7 +175,7 @@ end
                     drawings.Box.Visible = false
                     drawings.BoxOutline.Visible = false
                 end
-                
+
                 -- Health
                 if Config.ESP.HealthText then
                     drawings.Health.Text = tostring(math.floor(hum.Health)) .. "%"
@@ -199,24 +195,20 @@ end
                     drawings.Tracer.Visible = false
                 end
 
-                -- Skeleton
+                -- Skeleton (USA A TABELA UNIFICADA SkeletonConnections)
                 if Config.ESP.Skeleton then
-                    local rigType = hum.RigType == Enum.HumanoidRigType.R15 and "R15" or "R6"
-                    local connections = Skeletons[rigType]
-                    for i = 1, 14 do
-                        if i <= #connections then
-                            local p1, p2 = char:FindFirstChild(connections[i][1]), char:FindFirstChild(connections[i][2])
-                            if p1 and p2 then
-                                local pos1, vis1, z1 = GetScreenPos(p1.Position)
-                                local pos2, vis2, z2 = GetScreenPos(p2.Position)
-                                if vis1 and vis2 and z1 > 0 and z2 > 0 then
-                                    drawings.Skeleton[i].From = pos1
-                                    drawings.Skeleton[i].To = pos2
-                                    drawings.Skeleton[i].Color = Config.ESP.Color
-                                    drawings.Skeleton[i].Visible = true
-                                else
-                                    drawings.Skeleton[i].Visible = false
-                                end
+                    -- percorre todos os pares de ossos (19)
+                    for i, conn in ipairs(SkeletonConnections) do
+                        local p1 = char:FindFirstChild(conn[1])
+                        local p2 = char:FindFirstChild(conn[2])
+                        if p1 and p2 then
+                            local pos1, vis1, z1 = GetScreenPos(p1.Position)
+                            local pos2, vis2, z2 = GetScreenPos(p2.Position)
+                            if vis1 and vis2 and z1 > 0 and z2 > 0 then
+                                drawings.Skeleton[i].From = pos1
+                                drawings.Skeleton[i].To = pos2
+                                drawings.Skeleton[i].Color = Config.ESP.Color
+                                drawings.Skeleton[i].Visible = true
                             else
                                 drawings.Skeleton[i].Visible = false
                             end
@@ -229,7 +221,7 @@ end
                 end
             end
         else
-            -- Se o personagem não estiver vivo, esconde tudo
+            -- Esconde tudo se o personagem não estiver vivo
             drawings.Box.Visible = false
             drawings.BoxOutline.Visible = false
             drawings.Tracer.Visible = false
@@ -238,29 +230,29 @@ end
         end
     end
 
-
-
-    -- Aimbot 
+    -- Aimbot (COM suavização correta e dt)
     if Config.Aimbot.Enabled then
-    local target = GetClosestTarget()
-    if target then
-        local targetPos = target.Position
-        if Config.Aimbot.Prediction > 0 then
-            local vel = target.AssemblyLinearVelocity or Vector3.zero
-            if vel.Magnitude > 150 then vel = vel.Unit * 150 end
-            targetPos = targetPos + (vel * Config.Aimbot.Prediction)
-        end
+        local target = GetClosestTarget()
+        if target then
+            local targetPos = target.Position
+            if Config.Aimbot.Prediction > 0 then
+                local vel = target.AssemblyLinearVelocity or Vector3.zero
+                if vel.Magnitude > 150 then vel = vel.Unit * 150 end
+                targetPos = targetPos + (vel * Config.Aimbot.Prediction)
+            end
 
-        local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
-        if Config.Aimbot.Smoothness >= 1 then
-            Camera.CFrame = targetCFrame
-        else
-            -- Suavização exponencial (independente de FPS)
-            local smoothFactor = 1 - math.exp(-Config.Aimbot.Smoothness * 15 * dt)
-            Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, smoothFactor)
+            local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
+            if Config.Aimbot.Smoothness >= 1 then
+                Camera.CFrame = targetCFrame
+            else
+                local smoothFactor = 1 - math.exp(-Config.Aimbot.Smoothness * 15 * dt)
+                Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, smoothFactor)
+            end
         end
     end
-end
+end)
+
+
 ---------------------------------------------------------
 -- UI MODERNA SEM EMOJIS
 ---------------------------------------------------------
@@ -278,7 +270,7 @@ if success and targetParent then
 else
     UI.Parent = LocalPlayer:WaitForChild("PlayerGui")
 end
-
+-- 
 
 -- Botão Flutuante (redondo com ícone de mira)
 local FloatingBtn = Instance.new("ImageButton", UI)
