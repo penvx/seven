@@ -250,19 +250,17 @@ end
             if vel.Magnitude > 150 then vel = vel.Unit * 150 end
             targetPos = targetPos + (vel * Config.Aimbot.Prediction)
         end
-        
+
         local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPos)
         if Config.Aimbot.Smoothness >= 1 then
             Camera.CFrame = targetCFrame
         else
-                                else
-                        -- Fórmula de decaimento exponencial, 100% independente do FPS. Fica muito mais fluído.
-                        local smoothFactor = 1 - math.exp(-Config.Aimbot.Smoothness * 15 * dt)
-                        Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, smoothFactor)
-                    end
-                end
-            end
-        end)
+            -- Suavização exponencial (independente de FPS)
+            local smoothFactor = 1 - math.exp(-Config.Aimbot.Smoothness * 15 * dt)
+            Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, smoothFactor)
+        end
+    end
+end
 ---------------------------------------------------------
 -- UI MODERNA SEM EMOJIS
 ---------------------------------------------------------
@@ -580,55 +578,7 @@ local function BuildRealColorPicker(parent, name, iconId, configRef, configKey)
     label.TextColor3 = Color3.fromRGB(200, 200, 200)
     label.TextSize = 14
     label.TextXAlignment = Enum.TextXAlignment.Left
-    -- Sistema de Save/Load na Aba FOV
-local ConfigName = "EZ_MOBILE_CFG.json"
-local function CreateActionBtn(parent, name, iconId, callback)
-    local frame = Instance.new("Frame", parent)
-    frame.Size = UDim2.new(1, 0, 0, 44)
-    frame.BackgroundColor3 = Color3.fromRGB(40, 20, 25)
-    frame.BackgroundTransparency = 0.3
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
     
-    local icon = Instance.new("ImageLabel", frame)
-    icon.Size = UDim2.new(0, 20, 0, 20); icon.Position = UDim2.new(0, 10, 0.5, -10)
-    icon.BackgroundTransparency = 1; icon.Image = iconId; icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
-    
-    local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(1, -80, 1, 0); label.Position = UDim2.new(0, 40, 0, 0)
-    label.BackgroundTransparency = 1; label.Text = name; label.Font = Enum.Font.GothamBold
-    label.TextSize = 14; label.TextColor3 = Color3.fromRGB(220, 220, 220); label.TextXAlignment = Enum.TextXAlignment.Left
-    
-    local btn = Instance.new("TextButton", frame)
-    btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = ""; btn.ZIndex = 2
-    btn.MouseButton1Click:Connect(callback)
-end
-
-CreateActionBtn(tabFOV, "Save Config", "rbxassetid://6031280882", function()
-    if writefile then
-        local saveCfg = {
-            Aimbot = Config.Aimbot,
-            FOV = {Visible = Config.FOV.Visible, Radius = Config.FOV.Radius},
-            ESP = {Boxes = Config.ESP.Boxes, Tracers = Config.ESP.Tracers, Skeleton = Config.ESP.Skeleton, HealthText = Config.ESP.HealthText}
-        }
-        writefile(ConfigName, HttpService:JSONEncode(saveCfg))
-    end
-end)
-
-CreateActionBtn(tabFOV, "Load Config", "rbxassetid://6031236746", function()
-    if readfile and isfile and isfile(ConfigName) then
-        local saved = HttpService:JSONDecode(readfile(ConfigName))
-        if saved then 
-            Config.Aimbot = saved.Aimbot
-            Config.FOV.Visible = saved.FOV.Visible
-            Config.FOV.Radius = saved.FOV.Radius
-            Config.ESP.Boxes = saved.ESP.Boxes
-            Config.ESP.Tracers = saved.ESP.Tracers
-            Config.ESP.Skeleton = saved.ESP.Skeleton
-            Config.ESP.HealthText = saved.ESP.HealthText
-        end
-    end
-end)
-
     -- Área de Saturação/Valor (100x100)
     local SVArea = Instance.new("ImageButton", frame)
     SVArea.Size = UDim2.new(0, 100, 0, 100)
@@ -788,3 +738,65 @@ BuildRealColorPicker(tabESP, "ESP Color", "rbxassetid://6031072946", Config.ESP,
 CreateToggle(tabFOV, "Draw FOV", "rbxassetid://6031232211", function(s) Config.FOV.Visible = s end)
 CreateSlider(tabFOV, "FOV Radius", "rbxassetid://6031232211", 50, 500, 150, function(v) Config.FOV.Radius = v end)
 BuildRealColorPicker(tabFOV, "FOV Color", "rbxassetid://6031072946", Config.FOV, "Color") 
+
+-- Função auxiliar para botões de ação
+local function CreateActionBtn(parent, name, iconId, callback)
+    local frame = Instance.new("Frame", parent)
+    frame.Size = UDim2.new(1, 0, 0, 44)
+    frame.BackgroundColor3 = Color3.fromRGB(40, 20, 25)
+    frame.BackgroundTransparency = 0.3
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+
+    local icon = Instance.new("ImageLabel", frame)
+    icon.Size = UDim2.new(0, 20, 0, 20)
+    icon.Position = UDim2.new(0, 10, 0.5, -10)
+    icon.BackgroundTransparency = 1
+    icon.Image = iconId
+    icon.ImageColor3 = Color3.fromRGB(255, 50, 50)
+
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.new(1, -80, 1, 0)
+    label.Position = UDim2.new(0, 40, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 14
+    label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(1, 0, 1, 0)
+    btn.BackgroundTransparency = 1
+    btn.Text = ""
+    btn.ZIndex = 2
+    btn.MouseButton1Click:Connect(callback)
+end
+
+-- Agora sim, adicione os botões na aba FOV
+local ConfigName = "EZ_MOBILE_CFG.json"
+
+CreateActionBtn(tabFOV, "Save Config", "rbxassetid://6031280882", function()
+    if writefile then
+        local saveCfg = {
+            Aimbot = Config.Aimbot,
+            FOV = {Visible = Config.FOV.Visible, Radius = Config.FOV.Radius},
+            ESP = {Boxes = Config.ESP.Boxes, Tracers = Config.ESP.Tracers, Skeleton = Config.ESP.Skeleton, HealthText = Config.ESP.HealthText}
+        }
+        writefile(ConfigName, HttpService:JSONEncode(saveCfg))
+    end
+end)
+
+CreateActionBtn(tabFOV, "Load Config", "rbxassetid://6031236746", function()
+    if readfile and isfile and isfile(ConfigName) then
+        local saved = HttpService:JSONDecode(readfile(ConfigName))
+        if saved then
+            Config.Aimbot = saved.Aimbot
+            Config.FOV.Visible = saved.FOV.Visible
+            Config.FOV.Radius = saved.FOV.Radius
+            Config.ESP.Boxes = saved.ESP.Boxes
+            Config.ESP.Tracers = saved.ESP.Tracers
+            Config.ESP.Skeleton = saved.ESP.Skeleton
+            Config.ESP.HealthText = saved.ESP.HealthText
+        end
+    end
+end)
