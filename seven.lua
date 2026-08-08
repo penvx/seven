@@ -247,10 +247,24 @@ end
 ---------------------------------------------------------
 -- UI MODERNA SEM EMOJIS
 ---------------------------------------------------------
+---------------------------------------------------------
+-- UI MODERNA SEM EMOJIS
+---------------------------------------------------------
 local UI = Instance.new("ScreenGui")
 UI.Name = "EZ_UI"
-UI.Parent = gethui and gethui() or game:GetService("CoreGui")
 UI.IgnoreGuiInset = true
+
+-- Fix pro Delta: Tenta CoreGui, se ele bloquear, força no PlayerGui
+local success, targetParent = pcall(function()
+    return gethui and gethui() or game:GetService("CoreGui")
+end)
+
+if success and targetParent then
+    UI.Parent = targetParent
+else
+    UI.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
 
 -- Botão Flutuante (redondo com ícone de mira)
 local FloatingBtn = Instance.new("ImageButton", UI)
