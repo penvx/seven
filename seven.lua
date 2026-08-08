@@ -285,8 +285,12 @@ FloatingBtn.ZIndex = 2
 
 -- Painel Principal (com transparência)
 local Main = Instance.new("Frame", UI)
-Main.Size = UDim2.new(0, 360, 0, 500)
-Main.Position = UDim2.new(0.5, -180, 1.2, 0)
+-- FIX: AnchorPoint e Tamanho responsivo. 85% da tela, nunca vai cortar no mobile.
+Main.AnchorPoint = Vector2.new(0.5, 0.5) 
+Main.Size = UDim2.new(0, 340, 0.85, 0) 
+local HiddenPos = UDim2.new(0.5, 0, 1.5, 0)
+local VisiblePos = UDim2.new(0.5, 0, 0.5, 0)
+Main.Position = HiddenPos
 Main.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
 Main.BackgroundTransparency = 0.25
 Main.ClipsDescendants = true
@@ -323,7 +327,7 @@ CloseBtn.Image = "rbxassetid://6031094846" -- ícone X
 CloseBtn.ImageColor3 = Color3.fromRGB(200, 200, 200)
 CloseBtn.ZIndex = 2
 CloseBtn.MouseButton1Click:Connect(function()
-    Main:TweenPosition(UDim2.new(0.5, -180, 1.2, 0), "In", "Quart", 0.3, true, function()
+    Main:TweenPosition(HiddenPos, "In", "Quart", 0.3, true, function()
         Main.Visible = false
         FloatingBtn.Visible = true
     end)
@@ -333,7 +337,7 @@ end)
 FloatingBtn.MouseButton1Click:Connect(function()
     Main.Visible = true
     FloatingBtn.Visible = false
-    Main:TweenPosition(UDim2.new(0.5, -180, 0.5, -250), "Out", "Quart", 0.4, true)
+    Main:TweenPosition(VisiblePos, "Out", "Quart", 0.4, true)
 end)
 
 -- Sistema de Abas
@@ -373,9 +377,15 @@ local function CreateTab(name, iconId)
     content.CanvasSize = UDim2.new(0, 0, 2, 0)
     content.Visible = false
     content.ZIndex = 2
-    content.BottomImage = "rbxassetid://0" -- remove setas padrão
+    content.BottomImage = "rbxassetid://0" 
     content.MidImage = "rbxassetid://0"
     content.TopImage = "rbxassetid://0"
+    
+    -- FIX: O organizador que o teu amigo esqueceu. Ele empilha tudo perfeito.
+    local layout = Instance.new("UIListLayout", content)
+    layout.Padding = UDim.new(0, 5)
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
     
     table.insert(TabButtons, btn)
     table.insert(TabContents, content)
